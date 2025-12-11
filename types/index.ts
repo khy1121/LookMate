@@ -140,3 +140,64 @@ export interface ImageSearchResult {
   detectedCategory?: Category | null;
   products: Product[];
 }
+
+// ============================================
+// AI Backend API Types (Step 16)
+// ============================================
+
+/**
+ * AvatarGenerationRequest - 아바타 생성 요청
+ * 
+ * multipart/form-data로 전송:
+ * - faceImage: File (실제 파일)
+ * - height: number
+ * - bodyType: BodyType
+ * - gender?: Gender
+ */
+export interface AvatarGenerationRequest {
+  height: number;
+  bodyType: BodyType;
+  gender?: Gender;
+  // faceImage는 FormData로 전송되므로 타입 정의에서 제외
+}
+
+/**
+ * AvatarGenerationResponse - 아바타 생성 응답
+ */
+export interface AvatarGenerationResponse {
+  avatarUrl: string;
+  meta?: {
+    modelVersion?: string;
+    note?: string;
+  };
+}
+
+/**
+ * BackgroundRemovalResponse - 배경 제거 응답
+ */
+export interface BackgroundRemovalResponse {
+  imageUrl: string;
+  meta?: {
+    note?: string;
+  };
+}
+
+/**
+ * TryOnRequest - 가상 피팅 요청 (미래용)
+ */
+export interface TryOnRequest {
+  avatarImageUrl: string;
+  clothingImageUrls: string[];
+  pose?: string;
+}
+
+/**
+ * TryOnResponse - 가상 피팅 응답 (미래용)
+ */
+export interface TryOnResponse {
+  tryOnImageUrl: string;
+  meta?: {
+    modelVersion?: string;
+    note?: string;
+  };
+}

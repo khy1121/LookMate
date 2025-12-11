@@ -5,6 +5,9 @@ import { useUiStore } from '../store/useUiStore';
 import { aiService } from '../services/aiService';
 import { BodyType, Gender } from '../types';
 
+// AI 백엔드 모드 감지
+const isAiBackendEnabled = !!import.meta.env.VITE_API_BASE_URL;
+
 export const Avatar: React.FC = () => {
   const user = useStore((state) => state.user);
   const updateUser = useStore((state) => state.updateUser);
@@ -60,7 +63,24 @@ export const Avatar: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto pb-10">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">내 아바타 설정</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">내 아바타 설정</h2>
+        
+        {/* AI 모드 배지 */}
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          isAiBackendEnabled 
+            ? 'bg-green-100 text-green-700 border border-green-200' 
+            : 'bg-gray-100 text-gray-600 border border-gray-200'
+        }`}>
+          {isAiBackendEnabled ? '✅ AI 모드: 백엔드 연결' : '💡 AI 모드: Mock (프론트 전용)'}
+        </div>
+      </div>
+      
+      {!isAiBackendEnabled && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+          💡 백엔드가 연결되면 얼굴 사진만으로 전신 아바타를 생성할 수 있습니다.
+        </div>
+      )}
       
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left: Preview */}

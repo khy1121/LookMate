@@ -5,6 +5,9 @@ import { useUiStore } from '../store/useUiStore';
 import { Link, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
+// AI 백엔드 모드 감지
+const isAiBackendEnabled = !!import.meta.env.VITE_API_BASE_URL;
+
 export const Fitting: React.FC = () => {
   const navigate = useNavigate();
   const user = useStore((state) => state.user);
@@ -121,6 +124,13 @@ export const Fitting: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col lg:flex-row gap-6 pb-20 lg:pb-0">
+      
+      {/* AI 모드 안내 배너 */}
+      {!isAiBackendEnabled && (
+        <div className="lg:col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          💡 현재는 수동으로 위치/크기를 조절하는 기본 피팅 방식입니다. 백엔드 연결 시 AI 자동 피팅 기능이 제공됩니다.
+        </div>
+      )}
       
       {/* 1. Canvas Area (Left) */}
       <div className="flex-1 bg-gray-100 rounded-3xl shadow-inner border border-gray-200 overflow-hidden relative flex items-center justify-center min-h-[50vh] lg:h-auto">

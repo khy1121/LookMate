@@ -1,53 +1,123 @@
 
-import { BodyType, Gender, Category } from '../types';
+import { BodyType, Gender, Category, AvatarGenerationResponse, BackgroundRemovalResponse } from '../types';
+import { apiClient } from './apiClient';
+import { useUiStore } from '../store/useUiStore';
 
 /**
- * Mock AI Service
- * 실제 AI 모델 대신 `setTimeout`을 사용하여 비동기 처리를 흉내냅니다.
+ * AI Service - Backend/Mock Toggle
+ * 
+ * Feature Flag:
+ * - VITE_API_BASE_URL이 설정되어 있으면 백엔드 AI API 호출
+ * - 설정되지 않았으면 기존 Mock 로직 사용
+ * 
+ * 백엔드 연동 시에도 에러 발생하면 graceful fallback to Mock
  */
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const USE_BACKEND_AI = !!API_BASE;
 
 // 더미 딜레이 유틸
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * 백엔드 호출 에러 시 Toast 표시 및 Mock으로 fallback
+ */
+const handleBackendError = (error: any, fallbackFn: () => Promise<string>) => {
+  console.error('[AI Service] Backend error, falling back to Mock:', error);
+  const showToast = useUiStore.getState().showToast;
+  showToast('AI 서버와 통신할 수 없어 Mock 모드로 동작합니다.', 'info');
+  return fallbackFn();
+};
+
 export const aiService = {
   /**
-   * 이미지 배경 제거 Mock
+   * 이미지 배경 제거
+   * Backend: POST /api/ai/remove-background (multipart/form-data)
+   * Mock: URL.createObjectURL
    */
   removeBackground: async (file: File): Promise<string> => {
     console.log(`[AI] Removing background for ${file.name}...`);
-    await delay(1500); 
+
+    if (USE_BACKEND_AI) {
+      try {
+        const formData = new FormData();
+        formData.append('clothImage', file);
+
+        const response = await apiClient.upload<BackgroundRemovalResponse>(
+          '/api/ai/remove-background',
+          formData
+        );
+
+        console.log('[AI] Backend background removal success:', response);
+        return response.imageUrl;
+      } catch (error) {
+        return handleBackendError(error, async () => {
+          await delay(1500);
+          return URL.createObjectURL(file);
+        });
+      }
+    }
+
+    // Mock mode
+    await delay(1500);
     return URL.createObjectURL(file);
   },
 
   /**
-   * 아바타 생성 Mock
-   * 얼굴 사진이나 전신 사진을 받아서 아바타 이미지를 반환합니다.
+   * 아바타 생성
+   * Backend: POST /api/ai/avatar (multipart/form-data)
+   * Mock: Placeholder or uploaded image
    */
-  generateAvatar: async (options: { 
-    faceImage?: File | null; 
-    fullBodyImage?: File | null; 
-    height?: number; 
-    bodyType?: BodyType; 
-    gender?: Gender; 
+  generateAvatar: async (options: {
+    faceImage?: File | null;
+    fullBodyImage?: File | null;
+    height?: number;
+    bodyType?: BodyType;
+    gender?: Gender;
   }): Promise<string> => {
     console.log('[AI] Generating avatar with options:', options);
+
+    if (USE_BACKEND_AI && options.faceImage) {
+      try {
+        const formData = new FormData();
+        formData.append('faceImage', options.faceImage);
+        formData.append('height', String(options.height || 170));
+        formData.append('bodyType', options.bodyType || 'normal');
+        formData.append('gender', options.gender || 'unisex');
+
+        const response = await apiClient.upload<AvatarGenerationResponse>(
+          '/api/ai/avatar',
+          formData
+        );
+
+        console.log('[AI] Backend avatar generation success:', response);
+        return response.avatarUrl;
+      } catch (error) {
+        return handleBackendError(error, async () => {
+          await delay(2000);
+          if (options.fullBodyImage) {
+            return URL.createObjectURL(options.fullBodyImage);
+          }
+          const genderPath = options.gender === 'female' ? 'woman' : 'man';
+          return `https://via.placeholder.com/400x800?text=${genderPath}+${options.bodyType || 'normal'}+Avatar`;
+        });
+      }
+    }
+
+    // Mock mode
     await delay(2000);
 
-    // 1. 전신 사진이 있으면 그대로 사용 (배경 제거된 것으로 가정하거나 처리)
     if (options.fullBodyImage) {
       return URL.createObjectURL(options.fullBodyImage);
     }
-    
-    // 2. 얼굴 사진만 있거나 아무것도 없으면, 
-    // 실제로는 AI가 얼굴을 합성한 아바타를 생성해야 하지만 
-    // 여기서는 성별/체형에 따른 더미 이미지 URL을 반환한다고 가정
+
     const genderPath = options.gender === 'female' ? 'woman' : 'man';
-    // Mock Placeholder Image
     return `https://via.placeholder.com/400x800?text=${genderPath}+${options.bodyType || 'normal'}+Avatar`;
   },
 
   /**
    * 옷 자동 태깅/분석 Mock
+   * (백엔드 연동은 향후 확장)
    */
   detectAttributes: async (file: File) => {
     console.log(`[AI] Analyzing clothing attributes for ${file.name}...`);
@@ -57,5 +127,39 @@ export const aiService = {
       color: 'black',
       tags: ['casual', 'summer'],
     };
+  },
+
+  /**
+   * 가상 피팅 이미지 생성 (미래용 Stub)
+   * Backend: POST /api/ai/try-on
+   */
+  generateTryOnImage: async (
+    avatarUrl: string,
+    clothingUrls: string[]
+  ): Promise<string> => {
+    console.log('[AI] Try-on request:', { avatarUrl, clothingUrls });
+
+    if (USE_BACKEND_AI) {
+      try {
+        const response = await apiClient.post<{ tryOnImageUrl: string }>(
+          '/api/ai/try-on',
+          {
+            avatarImageUrl: avatarUrl,
+            clothingImageUrls: clothingUrls,
+          }
+        );
+
+        console.log('[AI] Backend try-on success:', response);
+        return response.tryOnImageUrl;
+      } catch (error) {
+        console.error('[AI] Try-on failed:', error);
+        // Fallback: 현재는 수동 레이어 방식 유지
+        return avatarUrl;
+      }
+    }
+
+    // Mock: 아직 구현되지 않음, 기존 수동 레이어 방식 사용
+    await delay(1000);
+    return avatarUrl;
   },
 };

@@ -82,3 +82,47 @@ Add the same environment variables in your hosting platform's environment settin
 - `productService.ts`: 상품 검색 API
 - `publicLookService.ts`: 공개 코디 피드 API
 - `aiService.ts`: AI 배경 제거 API
+
+## Backend (AI API Server)
+
+LookMate는 AI 기능(아바타 생성, 배경 제거, 가상 피팅)을 위한 Node.js + Express 백엔드를 제공합니다.
+
+### 백엔드 설치 및 실행
+
+```bash
+cd backend
+npm install
+npm run dev   # http://localhost:4000에서 실행
+```
+
+### 프론트엔드와 연동
+
+루트 디렉토리의 `.env.local`에 다음을 추가:
+
+```env
+VITE_API_BASE_URL=http://localhost:4000
+```
+
+이후 `npm run dev`(프론트엔드)를 실행하면 백엔드 AI 모드로 동작합니다.
+
+### AI API 엔드포인트
+
+| 엔드포인트 | 메서드 | 설명 | 상태 |
+|-----------|--------|------|------|
+| `/api/ai/avatar` | POST | 얼굴 사진 + 키/체형 정보 → 전신 아바타 URL 반환 | **Stub** |
+| `/api/ai/remove-background` | POST | 옷 사진 → 배경 제거된 이미지 URL 반환 | **Stub** |
+| `/api/ai/try-on` | POST | 아바타 + 옷 이미지들 → 가상 피팅 결과 URL 반환 | **Stub** (미래용) |
+
+**⚠️ 현재 Stub 상태**: 모든 엔드포인트는 placeholder URL을 반환합니다. 실제 AI 모델 연동 시 `backend/src/routes/ai.ts`의 TODO 주석을 참고하여 구현하세요.
+
+### 백엔드 없이 사용
+
+`VITE_API_BASE_URL`을 설정하지 않으면 기존처럼 프론트엔드 Mock 모드로 동작합니다. 모든 기능이 정상 작동하며, AI 백엔드는 선택 사항입니다.
+
+### 루트 스크립트 (편의 명령어)
+
+```bash
+npm run backend:dev     # 백엔드 개발 서버 실행
+npm run backend:build   # 백엔드 TypeScript 빌드
+npm run backend:start   # 빌드된 백엔드 실행 (프로덕션)
+```

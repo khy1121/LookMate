@@ -101,3 +101,14 @@ export async function del<T>(path: string, init?: RequestInit): Promise<T> {
   
   return res.json() as Promise<T>;
 }
+
+/**
+ * Exported API Client object (Step 16)
+ */
+export const apiClient = {
+  get,
+  post,
+  put,
+  del,
+  upload,
+};

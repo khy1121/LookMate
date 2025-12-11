@@ -7,7 +7,10 @@
     "dev": "vite --port 3001",
     "build": "vite build",
     "preview": "vite preview --port 4173",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "backend:dev": "cd backend && npm run dev",
+    "backend:build": "cd backend && npm run build",
+    "backend:start": "cd backend && npm start"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
