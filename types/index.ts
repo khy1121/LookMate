@@ -4,14 +4,34 @@ export type BodyType = 'slim' | 'normal' | 'athletic' | 'chubby';
 export type Gender = 'male' | 'female' | 'unisex';
 export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 
+/**
+ * User - 기본 사용자 정보 (Avatar 및 신체 정보 포함)
+ * 
+ * 실제 서비스 전환 시:
+ * - passwordHash 필드 추가 (백엔드에서만 관리)
+ * - 프론트엔드에는 절대 비밀번호 저장하지 말 것
+ */
 export interface User {
   id: string;
-  name: string;
+  name: string; // 사용자 이름 (displayName과 동일하게 사용)
   email: string;
+  displayName: string; // 사이트에 보여줄 이름
   avatarUrl: string | null;
   height?: number;
   bodyType?: BodyType;
   gender?: Gender;
+  createdAt: number;
+}
+
+/**
+ * AuthUser - 인증된 사용자 기본 정보
+ * authService에서 반환하는 최소 정보
+ */
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: number;
 }
 
 export interface ClothingItem {

@@ -1,7 +1,12 @@
 import { create } from 'zustand';
-import { User, ClothingItem, Look, ActiveLook, FittingLayer, Season, Product, Category } from '../types';
+import { User, ClothingItem, Look, ActiveLook, FittingLayer, Season, Product, Category, AuthUser } from '../types';
+import { getCurrentUser } from '../services/authService';
 
-// LocalStorage Helper
+// LocalStorage Helper - User-specific keys
+const getUserKey = (userId: string, resource: string): string => {
+  return `lm_${resource}_${userId}`;
+};
+
 const getLocalStorage = <T>(key: string, initial: T): T => {
   try {
     const item = localStorage.getItem(key);
@@ -21,7 +26,12 @@ const setLocalStorage = <T>(key: string, value: T) => {
 };
 
 interface AppState {
-  // User State
+  // Authentication State
+  currentUser: AuthUser | null;
+  setCurrentUser: (user: AuthUser | null) => void;
+  loadInitialUserAndData: () => Promise<void>;
+
+  // User State (Legacy - kept for avatar/profile info)
   user: User | null;
   isAuthenticated: boolean;
   login: (user: User) => void;
@@ -36,7 +46,7 @@ interface AppState {
   updateClothing: (id: string, patch: Partial<ClothingItem>) => void;
   addClothingFromProduct: (product: Product, override?: Partial<ClothingItem>) => void;
 
-  // Look State (New)
+  // Look State
   looks: Look[];
   createLookFromActive: (name: string, snapshotUrl?: string | null) => void;
   deleteLook: (id: string) => void;
@@ -58,32 +68,78 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  // User
-  user: getLocalStorage('user', null),
-  isAuthenticated: !!getLocalStorage('user', null),
+  // Authentication
+  currentUser: null,
+  
+  setCurrentUser: (user) => {
+    set({ currentUser: user, isAuthenticated: !!user });
+    if (user) {
+      // Load user-specific data
+      const clothesKey = getUserKey(user.id, 'clothes');
+      const looksKey = getUserKey(user.id, 'looks');
+      const clothes = getLocalStorage<ClothingItem[]>(clothesKey, []);
+      const looks = getLocalStorage<Look[]>(looksKey, []);
+      set({ clothes, looks });
+
+      // Sync legacy user object
+      const legacyUser: User = {
+        id: user.id,
+        name: user.displayName,
+        email: user.email,
+        displayName: user.displayName,
+        avatarUrl: null,
+        createdAt: user.createdAt,
+      };
+      set({ user: legacyUser });
+    } else {
+      // Clear data on logout
+      set({ clothes: [], looks: [], user: null, activeLook: null, recommendedItems: null });
+    }
+  },
+
+  loadInitialUserAndData: async () => {
+    try {
+      const authUser = await getCurrentUser();
+      get().setCurrentUser(authUser);
+    } catch (e) {
+      console.error('Failed to load initial user', e);
+      get().setCurrentUser(null);
+    }
+  },
+
+  // User (Legacy)
+  user: null,
+  isAuthenticated: false,
+  
   login: (user) => {
     set({ user, isAuthenticated: true });
-    setLocalStorage('user', user);
+    // Note: This is legacy, actual auth uses setCurrentUser
   },
+  
   logout: () => {
-    set({ user: null, isAuthenticated: false });
-    localStorage.removeItem('user');
+    set({ user: null, isAuthenticated: false, currentUser: null });
   },
+  
   updateUser: (patch) =>
     set((state) => {
       if (!state.user) return {};
       const updatedUser = { ...state.user, ...patch };
-      setLocalStorage('user', updatedUser);
       return { user: updatedUser };
     }),
 
   // Closet
-  clothes: getLocalStorage<ClothingItem[]>('clothes', []),
+  clothes: [],
+  
   addClothing: (itemData) =>
     set((state) => {
+      if (!state.currentUser) {
+        throw new Error('로그인이 필요합니다.');
+      }
+      
       const newItem: ClothingItem = {
         ...itemData,
         id: crypto.randomUUID(),
+        userId: state.currentUser.id,
         createdAt: Date.now(),
         isFavorite: false,
         shoppingUrl: itemData.shoppingUrl ?? null,
@@ -91,35 +147,45 @@ export const useStore = create<AppState>((set, get) => ({
         isPurchased: itemData.isPurchased ?? false,
       };
       const newClothes = [newItem, ...state.clothes];
-      setLocalStorage('clothes', newClothes);
+      const clothesKey = getUserKey(state.currentUser.id, 'clothes');
+      setLocalStorage(clothesKey, newClothes);
       return { clothes: newClothes };
     }),
+    
   removeClothing: (id) =>
     set((state) => {
+      if (!state.currentUser) return {};
       const newClothes = state.clothes.filter((c) => c.id !== id);
-      setLocalStorage('clothes', newClothes);
+      const clothesKey = getUserKey(state.currentUser.id, 'clothes');
+      setLocalStorage(clothesKey, newClothes);
       return { clothes: newClothes };
     }),
   toggleFavorite: (id) =>
     set((state) => {
+      if (!state.currentUser) return {};
       const newClothes = state.clothes.map((c) =>
         c.id === id ? { ...c, isFavorite: !c.isFavorite } : c
       );
-      setLocalStorage('clothes', newClothes);
+      const clothesKey = getUserKey(state.currentUser.id, 'clothes');
+      setLocalStorage(clothesKey, newClothes);
       return { clothes: newClothes };
     }),
   updateClothing: (id, patch) =>
     set((state) => {
+      if (!state.currentUser) return {};
       const newClothes = state.clothes.map((c) =>
         c.id === id ? { ...c, ...patch } : c
       );
-      setLocalStorage('clothes', newClothes);
+      const clothesKey = getUserKey(state.currentUser.id, 'clothes');
+      setLocalStorage(clothesKey, newClothes);
       return { clothes: newClothes };
     }),
 
   addClothingFromProduct: (product, override) =>
     set((state) => {
-      if (!state.user) return {};
+      if (!state.currentUser) {
+        throw new Error('로그인이 필요합니다.');
+      }
 
       // Extract color from tags (simple heuristic)
       const colorKeywords = ['black', 'white', 'red', 'blue', 'green', 'yellow', 'pink', 'purple', 'gray', 'brown', 'navy', 'beige'];
@@ -134,7 +200,7 @@ export const useStore = create<AppState>((set, get) => ({
       // Map Product → ClothingItem
       const newItem: ClothingItem = {
         id: crypto.randomUUID(),
-        userId: state.user.id,
+        userId: state.currentUser.id,
         imageUrl: product.thumbnailUrl,
         originalImageUrl: product.thumbnailUrl,
         category: (product.category as Category) ?? 'top',
@@ -153,15 +219,17 @@ export const useStore = create<AppState>((set, get) => ({
       };
 
       const newClothes = [newItem, ...state.clothes];
-      setLocalStorage('clothes', newClothes);
+      const clothesKey = getUserKey(state.currentUser.id, 'clothes');
+      setLocalStorage(clothesKey, newClothes);
       return { clothes: newClothes };
     }),
 
   // Looks
-  looks: getLocalStorage<Look[]>('looks', []),
+  looks: [],
+  
   createLookFromActive: (name, snapshotUrl) =>
     set((state) => {
-      if (!state.user || !state.activeLook) return {};
+      if (!state.currentUser || !state.activeLook) return {};
 
       // 현재 활성화된 레이어에 해당하는 옷 정보만 필터링 (Snapshot)
       const usedItemIds = state.activeLook.layers.map(l => l.clothingId);
@@ -169,7 +237,7 @@ export const useStore = create<AppState>((set, get) => ({
 
       const newLook: Look = {
         id: crypto.randomUUID(),
-        userId: state.user.id,
+        userId: state.currentUser.id,
         name,
         items: itemsSnapshot,
         // Deep copy layers to prevent reference issues
@@ -179,13 +247,16 @@ export const useStore = create<AppState>((set, get) => ({
       };
 
       const newLooks = [newLook, ...state.looks];
-      setLocalStorage('looks', newLooks);
+      const looksKey = getUserKey(state.currentUser.id, 'looks');
+      setLocalStorage(looksKey, newLooks);
       return { looks: newLooks, activeLook: { ...state.activeLook, name } };
     }),
   deleteLook: (id) =>
     set((state) => {
+      if (!state.currentUser) return {};
       const newLooks = state.looks.filter(l => l.id !== id);
-      setLocalStorage('looks', newLooks);
+      const looksKey = getUserKey(state.currentUser.id, 'looks');
+      setLocalStorage(looksKey, newLooks);
       return { looks: newLooks };
     }),
   setActiveLookFromLook: (id) =>

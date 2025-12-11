@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Closet } from './pages/Closet';
@@ -11,22 +12,20 @@ import { Explore } from './pages/Explore';
 import { Discover } from './pages/Discover';
 import { useStore } from './store/useStore';
 
-// 인증 보호용 Wrapper (간단 버전)
-const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const isAuthenticated = useStore((state) => state.isAuthenticated);
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-};
-
 export const App = () => {
+  const loadInitialUserAndData = useStore((state) => state.loadInitialUserAndData);
+
+  // Initialize user session on app load
+  useEffect(() => {
+    loadInitialUserAndData();
+  }, [loadInitialUserAndData]);
+
   return (
     <Routes>
       {/* Public Route */}
       <Route path="/" element={<Login />} />
 
-      {/* Private Routes */}
+      {/* Private Routes - Protected */}
       <Route
         path="/app"
         element={

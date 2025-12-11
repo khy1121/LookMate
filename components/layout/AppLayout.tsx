@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useStore } from '../../store/useStore';
+import { logout as authLogout } from '../../services/authService';
 
 const NAV_ITEMS = [
   { path: '/app/dashboard', label: '홈', icon: '🏠' },
@@ -13,12 +15,33 @@ const NAV_ITEMS = [
 ];
 
 export const AppLayout: React.FC = () => {
+  const navigate = useNavigate();
+  const currentUser = useStore((state) => state.currentUser);
+  const setCurrentUser = useStore((state) => state.setCurrentUser);
+
+  const handleLogout = async () => {
+    if (!confirm('로그아웃하시겠습니까?')) return;
+    
+    try {
+      await authLogout();
+      setCurrentUser(null);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed', error);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden font-sans">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm z-10">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-indigo-600 tracking-tight">AI Closet</h1>
+          <h1 className="text-2xl font-bold text-indigo-600 tracking-tight">LookMate</h1>
+          {currentUser && (
+            <p className="text-xs text-gray-500 mt-1 truncate">
+              {currentUser.displayName}
+            </p>
+          )}
         </div>
         <nav className="flex-1 px-4 space-y-2">
           {NAV_ITEMS.map((item) => (
@@ -38,9 +61,18 @@ export const AppLayout: React.FC = () => {
             </NavLink>
           ))}
         </nav>
+        
+        {/* Logout Button */}
         <div className="p-4 border-t border-gray-100">
-          <div className="text-xs text-gray-400 text-center">
-            v0.1.0 Alpha
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <span>🚪</span>
+            로그아웃
+          </button>
+          <div className="text-xs text-gray-400 text-center mt-2">
+            v0.2.0 Alpha
           </div>
         </div>
       </aside>

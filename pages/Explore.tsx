@@ -21,6 +21,7 @@ export const Explore: React.FC = () => {
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
 
+  const currentUser = useStore((s) => s.currentUser);
   const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
 
   useEffect(() => {
@@ -89,8 +90,17 @@ export const Explore: React.FC = () => {
   };
 
   const handleAddToCloset = (product: Product) => {
-    addClothingFromProduct(product);
-    alert(`"${product.name}"이(가) 옷장에 추가되었습니다!`);
+    if (!currentUser) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    
+    try {
+      addClothingFromProduct(product);
+      alert(`"${product.name}"이(가) 옷장에 추가되었습니다!`);
+    } catch (error: any) {
+      alert(error.message || '옷장에 추가하는 중 오류가 발생했습니다.');
+    }
   };
 
   return (
