@@ -89,40 +89,168 @@ LookMate는 AI 기능(아바타 생성, 배경 제거, 가상 피팅)을 위한 
 
 ### 백엔드 설치 및 실행
 
+**1. 백엔드 의존성 설치:**
 ```bash
 cd backend
 npm install
+```
+
+**2. 백엔드 개발 서버 실행:**
+```bash
 npm run dev   # http://localhost:4000에서 실행
 ```
 
+서버 실행 확인:
+- 터미널에 "🚀 LookMate AI Backend running on http://localhost:4000" 메시지가 표시됨
+- Health check: `http://localhost:4000/health` 브라우저로 접속 → `{"status":"ok","timestamp":"..."}` 응답 확인
+
 ### 프론트엔드와 연동
 
-루트 디렉토리의 `.env.local`에 다음을 추가:
-
+**1. 루트 디렉토리의 `.env.local` 파일 생성/수정:**
 ```env
 VITE_API_BASE_URL=http://localhost:4000
 ```
 
-이후 `npm run dev`(프론트엔드)를 실행하면 백엔드 AI 모드로 동작합니다.
+**2. 프론트엔드 개발 서버 (재)실행:**
+```bash
+npm run dev   # 루트 디렉토리에서
+```
+
+**3. 연동 확인:**
+- Avatar 페이지 상단에 "✅ AI 모드: 백엔드 연결" 녹색 배지 표시
+- Upload 페이지에서 옷 이미지 업로드 시 `POST /api/ai/remove-background` 호출 (Network 탭 확인)
+- Avatar 페이지에서 아바타 생성 시 `POST /api/ai/avatar` 호출 확인
 
 ### AI API 엔드포인트
 
-| 엔드포인트 | 메서드 | 설명 | 상태 |
-|-----------|--------|------|------|
-| `/api/ai/avatar` | POST | 얼굴 사진 + 키/체형 정보 → 전신 아바타 URL 반환 | **Stub** |
-| `/api/ai/remove-background` | POST | 옷 사진 → 배경 제거된 이미지 URL 반환 | **Stub** |
-| `/api/ai/try-on` | POST | 아바타 + 옷 이미지들 → 가상 피팅 결과 URL 반환 | **Stub** (미래용) |
+| 엔드포인트 | 메서드 | 입력 | 출력 | 상태 |
+|-----------|--------|------|------|------|
+| `/health` | GET | - | `{"status":"ok","timestamp":"..."}` | ✅ 동작 |
+| `/api/ai/avatar` | POST | multipart: `faceImage`, `height`, `bodyType`, `gender` | `{"avatarUrl": string, "meta": {...}}` | **Stub** |
+| `/api/ai/remove-background` | POST | multipart: `clothImage` | `{"imageUrl": string, "meta": {...}}` | **Stub** |
+| `/api/ai/try-on` | POST | JSON: `avatarImageUrl`, `clothingImageUrls[]` | `{"tryOnImageUrl": string, "meta": {...}}` | **Stub** |
+| `/uploads/*` | GET | - | Static file serving | ✅ 동작 |
 
-**⚠️ 현재 Stub 상태**: 모든 엔드포인트는 placeholder URL을 반환합니다. 실제 AI 모델 연동 시 `backend/src/routes/ai.ts`의 TODO 주석을 참고하여 구현하세요.
+### Stub 동작 방식 (현재 구현)
 
-### 백엔드 없이 사용
+**현재 백엔드는 실제 AI 처리 없이 다음과 같이 동작합니다:**
 
-`VITE_API_BASE_URL`을 설정하지 않으면 기존처럼 프론트엔드 Mock 모드로 동작합니다. 모든 기능이 정상 작동하며, AI 백엔드는 선택 사항입니다.
+1. **파일 업로드 처리 (✅ 실제 동작)**
+   - `backend/uploads/` 폴더에 이미지 저장
+   - 파일명: `YYYYMMDDHHMMSS-random-originalname.ext`
+   - 이미지 파일만 허용 (mime type 검증)
+   - 최대 크기: 5MB
+
+2. **배경 제거 (`/api/ai/remove-background`)**
+   - **현재**: 업로드된 원본 이미지 URL 반환
+   - **향후**: remove.bg API 또는 U-2-Net 모델 연동
+   - 응답 예시: `{"imageUrl": "http://localhost:4000/uploads/20241212024556-abc123-tshirt.jpg"}`
+
+3. **아바타 생성 (`/api/ai/avatar`)**
+   - **현재**: 업로드된 얼굴 이미지 URL 반환
+   - **향후**: DALL-E/Stable Diffusion으로 전신 아바타 생성
+   - 응답 예시: `{"avatarUrl": "http://localhost:4000/uploads/20241212024601-def456-face.jpg", "meta": {"height": 170, "bodyType": "normal"}}`
+
+4. **가상 피팅 (`/api/ai/try-on`)**
+   - **현재**: 입력받은 아바타 URL 그대로 반환
+   - **향후**: VITON-HD 등 GAN 기반 가상 피팅 모델 연동
+
+### Mock 모드 (백엔드 없이 사용)
+
+`.env.local`에서 `VITE_API_BASE_URL`을 주석 처리하거나 삭제하면:
+- 프론트엔드가 자동으로 Mock 모드로 전환
+- Avatar 페이지에 "💡 AI 모드: Mock" 회색 배지 표시
+- 모든 기능이 브라우저 내에서 동작 (백엔드 불필요)
+- 배경 제거: `URL.createObjectURL()` 사용
+- 아바타 생성: placeholder 이미지 사용
+
+### 에러 처리 및 Fallback
+
+백엔드가 실행 중이지 않거나 에러 발생 시:
+- 자동으로 Mock 모드로 fallback
+- 화면 우측 상단에 Toast 알림: "AI 서버와 통신할 수 없어 Mock 모드로 동작합니다"
+- 기존 기능 모두 정상 동작 (사용자 경험 중단 없음)
+
+### 빌드 및 배포
+
+**백엔드 빌드:**
+```bash
+cd backend
+npm run build   # TypeScript → JavaScript 컴파일 (dist/ 폴더)
+```
+
+**프로덕션 실행:**
+```bash
+npm run start   # node dist/server.js
+```
+
+**환경 변수 (.env):**
+```env
+PORT=4000
+NODE_ENV=production
+```
 
 ### 루트 스크립트 (편의 명령어)
 
+루트 디렉토리에서 백엔드 관련 명령어 실행:
 ```bash
 npm run backend:dev     # 백엔드 개발 서버 실행
 npm run backend:build   # 백엔드 TypeScript 빌드
 npm run backend:start   # 빌드된 백엔드 실행 (프로덕션)
+```
+
+### 실제 AI 모델 통합 가이드
+
+`backend/src/routes/ai.ts` 파일의 TODO 주석을 참고하여 다음 단계로 실제 AI 모델을 연동할 수 있습니다:
+
+**1. 배경 제거 (remove.bg API 예시):**
+```typescript
+// backend/src/routes/ai.ts의 /api/ai/remove-background 엔드포인트
+const FormData = require('form-data');
+const axios = require('axios');
+
+const formData = new FormData();
+formData.append('image_file', fs.createReadStream(clothImage.path));
+formData.append('size', 'auto');
+
+const response = await axios.post('https://api.remove.bg/v1.0/removebg', formData, {
+  headers: {
+    'X-Api-Key': process.env.REMOVEBG_API_KEY,
+  },
+  responseType: 'arraybuffer'
+});
+
+// 처리된 이미지를 uploads/ 폴더에 저장
+const outputPath = path.join(uploadsDir, `nobg-${clothImage.filename}`);
+fs.writeFileSync(outputPath, response.data);
+
+return { imageUrl: getImageUrl(req, `nobg-${clothImage.filename}`) };
+```
+
+**2. 아바타 생성 (OpenAI DALL-E 예시):**
+```typescript
+// TODO 위치: /api/ai/avatar 엔드포인트
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const prompt = `Full-body ${gender} avatar, ${bodyType} body type, ${height}cm tall, professional photo`;
+const response = await openai.images.generate({
+  model: "dall-e-3",
+  prompt: prompt,
+  n: 1,
+  size: "1024x1024"
+});
+
+const avatarUrl = response.data[0].url;
+```
+
+**3. 가상 피팅 (GPU 서버 연동 예시):**
+```typescript
+// TODO 위치: /api/ai/try-on 엔드포인트
+const response = await axios.post('http://your-gpu-server:5000/try-on', {
+  avatar_url: avatarImageUrl,
+  garment_urls: clothingImageUrls,
+  model: 'viton-hd'
+});
+
+return { tryOnImageUrl: response.data.result_url };
 ```

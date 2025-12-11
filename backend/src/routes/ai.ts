@@ -16,12 +16,38 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    // Generate unique filename: YYYYMMDD-HHMMSS-random-originalname
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+    const random = Math.random().toString(36).substring(2, 8);
+    const ext = path.extname(file.originalname);
+    const basename = path.basename(file.originalname, ext).replace(/\s+/g, '-');
+    cb(null, `${timestamp}-${random}-${basename}${ext}`);
   }
 });
 
-const upload = multer({ storage });
+// File filter: only accept images
+const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (!file.mimetype.startsWith('image/')) {
+    return cb(new Error('Only image files are allowed'));
+  }
+  cb(null, true);
+};
+
+// Multer upload configuration with validation
+const upload = multer({ 
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max
+  }
+});
+
+// Helper function to get full image URL
+const getImageUrl = (req: Request, filename: string): string => {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  return `${protocol}://${host}/uploads/${filename}`;
+};
 
 /**
  * POST /api/ai/avatar
@@ -48,26 +74,34 @@ router.post('/avatar', upload.single('faceImage'), (req: Request, res: Response)
       return res.status(400).json({ error: 'faceImage is required' });
     }
 
-    console.log('📸 Avatar generation request:', {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] 📸 Avatar generation request:`, {
+      fileName: faceImage.filename,
+      originalName: faceImage.originalname,
+      size: `${(faceImage.size / 1024).toFixed(2)} KB`,
       height,
       bodyType,
-      gender,
-      faceImageSize: faceImage.size
+      gender
     });
 
-    // STUB: Return placeholder avatar URL
+    // STUB: Currently returns uploaded face image as avatar
     // TODO: Integrate actual AI avatar generation model here
-    const avatarUrl = `https://placehold.co/400x600/4f46e5/white?text=Avatar+${bodyType}`;
+    // - Use face image + body parameters to generate full-body avatar
+    // - Options: DALL-E, Stable Diffusion, custom GAN model
+    const avatarUrl = getImageUrl(req, faceImage.filename);
 
     res.json({
       avatarUrl,
       meta: {
+        height: height ? parseFloat(height) : undefined,
+        bodyType,
+        gender,
         modelVersion: 'stub-v1.0',
-        note: 'This is a placeholder response. Integrate AI model to generate real avatars.'
+        note: 'STUB: Using uploaded face image. Integrate AI model for real avatar generation.'
       }
     });
   } catch (error: any) {
-    console.error('Avatar generation error:', error);
+    console.error('❌ Avatar generation error:', error);
     res.status(500).json({ error: 'Avatar generation failed', message: error.message });
   }
 });
@@ -92,23 +126,31 @@ router.post('/remove-background', upload.single('clothImage'), (req: Request, re
       return res.status(400).json({ error: 'clothImage is required' });
     }
 
-    console.log('🖼️ Background removal request:', {
-      fileName: clothImage.originalname,
-      size: clothImage.size
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] 🖼️ Background removal request:`, {
+      fileName: clothImage.filename,
+      originalName: clothImage.originalname,
+      size: `${(clothImage.size / 1024).toFixed(2)} KB`,
+      mimeType: clothImage.mimetype
     });
 
-    // STUB: Return placeholder URL
+    // STUB: Currently returns original uploaded image
     // TODO: Integrate remove.bg API or custom background removal model
-    const imageUrl = `https://placehold.co/400x400/e5e7eb/1f2937?text=No+BG`;
+    // - Option 1: remove.bg API (https://www.remove.bg/api)
+    // - Option 2: U-2-Net or similar open-source model
+    // - Option 3: Custom-trained model on GPU server
+    const imageUrl = getImageUrl(req, clothImage.filename);
 
     res.json({
       imageUrl,
       meta: {
-        note: 'This is a placeholder response. Integrate background removal API/model here.'
+        originalSize: clothImage.size,
+        processedAt: timestamp,
+        note: 'STUB: Using original image. Integrate background removal API/model for actual processing.'
       }
     });
   } catch (error: any) {
-    console.error('Background removal error:', error);
+    console.error('❌ Background removal error:', error);
     res.status(500).json({ error: 'Background removal failed', message: error.message });
   }
 });
@@ -132,25 +174,42 @@ router.post('/try-on', (req: Request, res: Response) => {
   try {
     const { avatarImageUrl, clothingImageUrls, pose } = req.body;
 
-    console.log('👗 Try-on request:', {
+    // Validation
+    if (!avatarImageUrl) {
+      return res.status(400).json({ error: 'avatarImageUrl is required' });
+    }
+    if (!clothingImageUrls || !Array.isArray(clothingImageUrls) || clothingImageUrls.length === 0) {
+      return res.status(400).json({ error: 'clothingImageUrls array is required' });
+    }
+
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] 👗 Virtual try-on request:`, {
       avatarImageUrl,
-      clothingCount: clothingImageUrls?.length,
-      pose
+      clothingCount: clothingImageUrls.length,
+      clothingUrls: clothingImageUrls,
+      pose: pose || 'default'
     });
 
     // STUB: Return placeholder try-on result
-    // TODO: Integrate virtual try-on AI model (e.g., GAN-based garment transfer)
-    const tryOnImageUrl = `https://placehold.co/400x600/7c3aed/white?text=Try+On+Result`;
+    // TODO: Integrate virtual try-on AI model
+    // - Options: VITON-HD, HR-VITON, or similar garment transfer models
+    // - Requires GPU inference server
+    // - For now, return avatar URL as placeholder
+    const tryOnImageUrl = avatarImageUrl;
 
     res.json({
       tryOnImageUrl,
       meta: {
+        avatarUrl: avatarImageUrl,
+        clothingCount: clothingImageUrls.length,
+        pose: pose || 'default',
         modelVersion: 'stub-v1.0',
-        note: 'This is a placeholder response. Integrate virtual try-on AI model here.'
+        processedAt: timestamp,
+        note: 'STUB: Returning original avatar. Integrate virtual try-on AI model for actual garment transfer.'
       }
     });
   } catch (error: any) {
-    console.error('Try-on error:', error);
+    console.error('❌ Virtual try-on error:', error);
     res.status(500).json({ error: 'Try-on failed', message: error.message });
   }
 });
