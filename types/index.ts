@@ -27,6 +27,10 @@ export interface ClothingItem {
   memo?: string;
   isFavorite: boolean;
   createdAt: number;
+  // Shopping metadata
+  shoppingUrl?: string | null;   // 원본 쇼핑몰/상품 링크
+  price?: number | null;         // 가격 (원 단위)
+  isPurchased?: boolean;         // 구매 여부
 }
 
 // --- Fitting Room Types ---

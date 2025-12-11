@@ -47,6 +47,16 @@ export const Dashboard: React.FC = () => {
       .slice(0, 3); // TOP 3만
   }, [looks]);
 
+  // 쇼핑 통계 계산
+  const shoppingStats = useMemo(() => {
+    const totalItems = clothes.length;
+    const purchasedCount = clothes.filter(item => item.isPurchased).length;
+    const unpurchasedCount = totalItems - purchasedCount;
+    const purchaseRate = totalItems > 0 ? Math.round((purchasedCount / totalItems) * 100) : 0;
+
+    return { totalItems, purchasedCount, unpurchasedCount, purchaseRate };
+  }, [clothes]);
+
   const handleLoadLook = (lookId: string) => {
     setActiveLookFromLook(lookId);
     navigate('/app/fitting');
@@ -91,12 +101,44 @@ export const Dashboard: React.FC = () => {
           <div className="text-3xl font-bold text-indigo-500">{looks.length}</div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="text-gray-400 text-sm mb-1">아바타</div>
-          <div className="text-lg font-medium text-gray-600">
-            {user?.avatarUrl ? '설정됨' : '미설정'}
+          <div className="text-gray-400 text-sm mb-1">구매 현황</div>
+          <div className="text-lg font-bold text-blue-600">
+            {shoppingStats.purchasedCount} / {shoppingStats.totalItems}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            구매율 {shoppingStats.purchaseRate}%
           </div>
         </div>
       </div>
+
+      {/* Shopping Summary */}
+      {shoppingStats.unpurchasedCount > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-1">🛒 쇼핑 상태 요약</h3>
+              <p className="text-sm text-gray-600">
+                전체 <strong>{shoppingStats.totalItems}벌</strong> 중 
+                <strong className="text-blue-600"> {shoppingStats.purchasedCount}벌 구매 완료</strong>, 
+                <strong className="text-green-600"> {shoppingStats.unpurchasedCount}벌 관심 상품</strong>
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/app/closet')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition-colors"
+            >
+              관심상품 보기
+            </button>
+          </div>
+          {/* Progress Bar */}
+          <div className="mt-4 bg-white rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-blue-500 h-full transition-all duration-500"
+              style={{ width: `${shoppingStats.purchaseRate}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 오늘의 추천 코디 섹션 */}
       <div className="my-8">

@@ -4,6 +4,8 @@ import { useStore } from '../store/useStore';
 import { Link, useNavigate } from 'react-router-dom';
 import { Category } from '../types';
 
+type PurchaseFilter = 'all' | 'unpurchased' | 'purchased';
+
 const CATEGORIES: { value: Category | 'all'; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'top', label: '상의' },
@@ -23,6 +25,7 @@ export const Closet: React.FC = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [searchText, setSearchText] = useState('');
+  const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>('all');
 
   // Filtering Logic
   const filteredClothes = clothes.filter((item) => {
@@ -32,7 +35,12 @@ export const Closet: React.FC = () => {
       item.brand?.toLowerCase().includes(searchText.toLowerCase()) ||
       item.memo?.toLowerCase().includes(searchText.toLowerCase());
     
-    return matchesCategory && matchesSearch;
+    const matchesPurchase = 
+      purchaseFilter === 'all' ||
+      (purchaseFilter === 'unpurchased' && !item.isPurchased) ||
+      (purchaseFilter === 'purchased' && item.isPurchased);
+    
+    return matchesCategory && matchesSearch && matchesPurchase;
   });
 
   const handleTryOn = (e: React.MouseEvent, itemId: string) => {
@@ -63,7 +71,7 @@ export const Closet: React.FC = () => {
       </header>
 
       {/* Category Filter */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
         {CATEGORIES.map((cat) => (
           <button 
             key={cat.value}
@@ -77,6 +85,40 @@ export const Closet: React.FC = () => {
             {cat.label}
           </button>
         ))}
+      </div>
+
+      {/* Purchase Filter */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setPurchaseFilter('all')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            purchaseFilter === 'all'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          전체
+        </button>
+        <button
+          onClick={() => setPurchaseFilter('unpurchased')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            purchaseFilter === 'unpurchased'
+              ? 'bg-green-600 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          관심상품
+        </button>
+        <button
+          onClick={() => setPurchaseFilter('purchased')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            purchaseFilter === 'purchased'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          구매완료
+        </button>
       </div>
 
       {/* Grid Content */}
@@ -133,10 +175,35 @@ export const Closet: React.FC = () => {
               <div className="p-3">
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{item.category}</span>
-                  {item.size && <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.size}</span>}
+                  {item.isPurchased ? (
+                    <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">구매완료</span>
+                  ) : item.price ? (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">관심상품</span>
+                  ) : null}
                 </div>
                 <div className="text-sm font-medium text-gray-800 truncate">{item.color} {item.brand ? item.brand : 'Item'}</div>
-                <div className="text-xs text-gray-400 mt-1 truncate">{item.memo || '-'}</div>
+                
+                {/* Price */}
+                {item.price && (
+                  <div className="text-sm font-bold text-gray-900 mt-1">
+                    ₩{item.price.toLocaleString('ko-KR')}
+                  </div>
+                )}
+                
+                {/* Shopping URL */}
+                {item.shoppingUrl && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(item.shoppingUrl!, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="mt-2 w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                  >
+                    🔗 상품 페이지 열기
+                  </button>
+                )}
+                
+                {item.size && <div className="text-xs text-gray-400 mt-1">사이즈: {item.size}</div>}
               </div>
             </div>
           ))}

@@ -2,7 +2,7 @@ import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { aiService } from '../services/aiService';
-import { Category } from '../types';
+import { Category, Season } from '../types';
 
 export const Upload: React.FC = () => {
   const navigate = useNavigate();
@@ -16,7 +16,13 @@ export const Upload: React.FC = () => {
   const [color, setColor] = useState('');
   const [brand, setBrand] = useState('');
   const [size, setSize] = useState('');
+  const [season, setSeason] = useState<Season | ''>('');
   const [memo, setMemo] = useState('');
+  
+  // Shopping metadata
+  const [shoppingUrl, setShoppingUrl] = useState('');
+  const [price, setPrice] = useState('');
+  const [isPurchased, setIsPurchased] = useState(false);
   
   // UI State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -49,19 +55,27 @@ export const Upload: React.FC = () => {
       // 1. 배경 제거 (Mock API 호출)
       const processedImageUrl = await aiService.removeBackground(file);
 
-      // 2. 스토어에 추가
+      // 2. 가격 파싱
+      const parsedPrice = price.trim() ? parseInt(price.replace(/,/g, '')) : null;
+      const validPrice = parsedPrice && !isNaN(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null;
+
+      // 3. 스토어에 추가
       addClothing({
         userId: user.id,
-        imageUrl: processedImageUrl, // 실제로는 서버 업로드 후 URL이어야 함
-        originalImageUrl: URL.createObjectURL(file), // 원본 미리보기용
+        imageUrl: processedImageUrl,
+        originalImageUrl: URL.createObjectURL(file),
         category,
         color: color || 'Unknown',
         brand,
         size,
+        season: season || undefined,
         memo,
+        shoppingUrl: shoppingUrl.trim() || null,
+        price: validPrice,
+        isPurchased,
       });
 
-      // 3. 이동
+      // 4. 이동
       navigate('/app/closet');
     } catch (error) {
       console.error('Upload failed', error);
@@ -154,6 +168,63 @@ export const Upload: React.FC = () => {
                 placeholder="예: M, 100"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">시즌 (선택)</label>
+              <select 
+                value={season}
+                onChange={(e) => setSeason(e.target.value as Season | '')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              >
+                <option value="">선택 안함</option>
+                <option value="spring">봄</option>
+                <option value="summer">여름</option>
+                <option value="fall">가을</option>
+                <option value="winter">겨울</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Shopping Information */}
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4">🛒 쇼핑 정보 (선택)</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">원본 상품 링크</label>
+                <input 
+                  type="url" 
+                  value={shoppingUrl}
+                  onChange={(e) => setShoppingUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">가격 (원)</label>
+                  <input 
+                    type="text" 
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="49000"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors w-full justify-center border border-gray-200">
+                    <input 
+                      type="checkbox" 
+                      checked={isPurchased}
+                      onChange={(e) => setIsPurchased(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">이미 구매함</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -33,6 +33,7 @@ interface AppState {
   addClothing: (item: Omit<ClothingItem, 'id' | 'createdAt' | 'isFavorite'>) => void;
   removeClothing: (id: string) => void;
   toggleFavorite: (id: string) => void;
+  updateClothing: (id: string, patch: Partial<ClothingItem>) => void;
 
   // Look State (New)
   looks: Look[];
@@ -84,6 +85,9 @@ export const useStore = create<AppState>((set, get) => ({
         id: crypto.randomUUID(),
         createdAt: Date.now(),
         isFavorite: false,
+        shoppingUrl: itemData.shoppingUrl ?? null,
+        price: itemData.price ?? null,
+        isPurchased: itemData.isPurchased ?? false,
       };
       const newClothes = [newItem, ...state.clothes];
       setLocalStorage('clothes', newClothes);
@@ -99,6 +103,14 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => {
       const newClothes = state.clothes.map((c) =>
         c.id === id ? { ...c, isFavorite: !c.isFavorite } : c
+      );
+      setLocalStorage('clothes', newClothes);
+      return { clothes: newClothes };
+    }),
+  updateClothing: (id, patch) =>
+    set((state) => {
+      const newClothes = state.clothes.map((c) =>
+        c.id === id ? { ...c, ...patch } : c
       );
       setLocalStorage('clothes', newClothes);
       return { clothes: newClothes };
