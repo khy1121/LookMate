@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, ClothingItem, Look, ActiveLook, FittingLayer, Season, Product, Category, AuthUser } from '../types';
+import { User, ClothingItem, Look, ActiveLook, FittingLayer, Season, Product, Category, AuthUser, PublicLook } from '../types';
 import { getCurrentUser } from '../services/authService';
 
 // LocalStorage Helper - User-specific keys
@@ -48,7 +48,7 @@ interface AppState {
 
   // Look State
   looks: Look[];
-  createLookFromActive: (name: string, snapshotUrl?: string | null) => void;
+  createLookFromActive: (name: string, snapshotUrl?: string | null) => string | null;
   deleteLook: (id: string) => void;
   setActiveLookFromLook: (id: string) => void;
 
@@ -65,6 +65,15 @@ interface AppState {
   generateRecommendedItems: (options?: { season?: Season }) => void;
   clearRecommendedItems: () => void;
   applyRecommendedToActive: () => void;
+
+  // Public Look State (Social Feed)
+  publicLooks: PublicLook[];
+  likedPublicLookIds: string[];
+  bookmarkedPublicLookIds: string[];
+  publishLook: (lookId: string, tags?: string[]) => void;
+  toggleLikePublicLook: (publicId: string) => void;
+  toggleBookmarkPublicLook: (publicId: string) => void;
+  getPublicLookById: (publicId: string) => PublicLook | null;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -227,7 +236,8 @@ export const useStore = create<AppState>((set, get) => ({
   // Looks
   looks: [],
   
-  createLookFromActive: (name, snapshotUrl) =>
+  createLookFromActive: (name, snapshotUrl) => {
+    let savedLookId: string | null = null;
     set((state) => {
       if (!state.currentUser || !state.activeLook) return {};
 
@@ -246,11 +256,15 @@ export const useStore = create<AppState>((set, get) => ({
         snapshotUrl: snapshotUrl || null,
       };
 
+      savedLookId = newLook.id;
+
       const newLooks = [newLook, ...state.looks];
       const looksKey = getUserKey(state.currentUser.id, 'looks');
       setLocalStorage(looksKey, newLooks);
       return { looks: newLooks, activeLook: { ...state.activeLook, name } };
-    }),
+    });
+    return savedLookId;
+  },
   deleteLook: (id) =>
     set((state) => {
       if (!state.currentUser) return {};
@@ -443,4 +457,108 @@ export const useStore = create<AppState>((set, get) => ({
         },
       };
     }),
+
+  // Public Look State (Social Feed)
+  publicLooks: getLocalStorage<PublicLook[]>('lm_publicLooks', []),
+  likedPublicLookIds: [],
+  bookmarkedPublicLookIds: [],
+
+  publishLook: (lookId, tags = []) =>
+    set((state) => {
+      if (!state.currentUser) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const look = state.looks.find((l) => l.id === lookId);
+      if (!look) {
+        throw new Error('코디를 찾을 수 없습니다.');
+      }
+
+      const publicId = crypto.randomUUID();
+      const now = Date.now();
+
+      // Update Look with public metadata
+      const updatedLooks = state.looks.map((l) =>
+        l.id === lookId
+          ? { ...l, isPublic: true, publicId, tags }
+          : l
+      );
+
+      // Create PublicLook
+      const publicLook: PublicLook = {
+        publicId,
+        name: look.name,
+        snapshotUrl: look.snapshotUrl || null,
+        items: look.items,
+        tags,
+        ownerName: state.currentUser.displayName,
+        ownerId: state.currentUser.id,
+        createdAt: now,
+        likesCount: 0,
+        bookmarksCount: 0,
+      };
+
+      const newPublicLooks = [...state.publicLooks, publicLook];
+
+      // Persist
+      setLocalStorage('lm_publicLooks', newPublicLooks);
+      setLocalStorage(getUserKey(state.currentUser.id, 'looks'), updatedLooks);
+
+      return { looks: updatedLooks, publicLooks: newPublicLooks };
+    }),
+
+  toggleLikePublicLook: (publicId) =>
+    set((state) => {
+      if (!state.currentUser) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const isLiked = state.likedPublicLookIds.includes(publicId);
+      const newLikedIds = isLiked
+        ? state.likedPublicLookIds.filter((id) => id !== publicId)
+        : [...state.likedPublicLookIds, publicId];
+
+      // Update like count on PublicLook
+      const updatedPublicLooks = state.publicLooks.map((pl) =>
+        pl.publicId === publicId
+          ? { ...pl, likesCount: pl.likesCount + (isLiked ? -1 : 1) }
+          : pl
+      );
+
+      // Persist
+      setLocalStorage(getUserKey(state.currentUser.id, 'liked'), newLikedIds);
+      setLocalStorage('lm_publicLooks', updatedPublicLooks);
+
+      return { likedPublicLookIds: newLikedIds, publicLooks: updatedPublicLooks };
+    }),
+
+  toggleBookmarkPublicLook: (publicId) =>
+    set((state) => {
+      if (!state.currentUser) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const isBookmarked = state.bookmarkedPublicLookIds.includes(publicId);
+      const newBookmarkedIds = isBookmarked
+        ? state.bookmarkedPublicLookIds.filter((id) => id !== publicId)
+        : [...state.bookmarkedPublicLookIds, publicId];
+
+      // Update bookmark count on PublicLook
+      const updatedPublicLooks = state.publicLooks.map((pl) =>
+        pl.publicId === publicId
+          ? { ...pl, bookmarksCount: pl.bookmarksCount + (isBookmarked ? -1 : 1) }
+          : pl
+      );
+
+      // Persist
+      setLocalStorage(getUserKey(state.currentUser.id, 'bookmarked'), newBookmarkedIds);
+      setLocalStorage('lm_publicLooks', updatedPublicLooks);
+
+      return { bookmarkedPublicLookIds: newBookmarkedIds, publicLooks: updatedPublicLooks };
+    }),
+
+  getPublicLookById: (publicId) => {
+    const state = get();
+    return state.publicLooks.find((pl) => pl.publicId === publicId) || null;
+  },
 }));

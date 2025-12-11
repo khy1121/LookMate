@@ -13,12 +13,15 @@ export const Fitting: React.FC = () => {
   const removeItemFromActiveLook = useStore((state) => state.removeItemFromActiveLook);
   const clearActiveLook = useStore((state) => state.clearActiveLook);
   const createLookFromActive = useStore((state) => state.createLookFromActive);
+  const publishLook = useStore((state) => state.publishLook);
 
   const layers = activeLook?.layers || [];
   
   // Local state for Look Name input
   const [lookName, setLookName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [tagsInput, setTagsInput] = useState('');
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // activeLook이 바뀌거나 로드되면 이름을 동기화
@@ -42,9 +45,21 @@ export const Fitting: React.FC = () => {
 
     if (!canvasRef.current) {
       // 캔버스 ref를 못 찾으면 snapshot 없이 저장
-      createLookFromActive(lookName.trim(), null);
+      const savedLookId = createLookFromActive(lookName.trim(), null);
+      
+      // 공개 공유 처리
+      if (isPublic && savedLookId) {
+        const tags = tagsInput
+          .split(',')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        publishLook(savedLookId, tags);
+      }
+      
       setLookName('');
-      alert('현재 코디가 저장되었습니다! 💾');
+      setIsPublic(false);
+      setTagsInput('');
+      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾');
       return;
     }
 
@@ -56,15 +71,38 @@ export const Fitting: React.FC = () => {
         scale: 2, // 고해상도 캡처
       });
       const dataUrl = canvas.toDataURL('image/png');
-      createLookFromActive(lookName.trim(), dataUrl);
+      const savedLookId = createLookFromActive(lookName.trim(), dataUrl);
+      
+      // 공개 공유 처리
+      if (isPublic && savedLookId) {
+        const tags = tagsInput
+          .split(',')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        publishLook(savedLookId, tags);
+      }
+      
       setLookName('');
-      alert('현재 코디가 저장되었습니다! 💾');
+      setIsPublic(false);
+      setTagsInput('');
+      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾');
     } catch (err) {
       console.error('스냅샷 생성 실패', err);
       // 실패 시에도 최소한 데이터는 저장되도록 fallback
-      createLookFromActive(lookName.trim(), null);
+      const savedLookId = createLookFromActive(lookName.trim(), null);
+      
+      if (isPublic && savedLookId) {
+        const tags = tagsInput
+          .split(',')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        publishLook(savedLookId, tags);
+      }
+      
       setLookName('');
-      alert('코디가 저장되었습니다 (미리보기 생성 실패)');
+      setIsPublic(false);
+      setTagsInput('');
+      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다 (미리보기 생성 실패)' : '코디가 저장되었습니다 (미리보기 생성 실패)');
     } finally {
       setSaving(false);
     }
@@ -133,7 +171,7 @@ export const Fitting: React.FC = () => {
         
         {/* Save & Reset Actions */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <input 
               type="text"
               value={lookName}
@@ -149,6 +187,35 @@ export const Fitting: React.FC = () => {
               {saving ? '저장 중...' : '저장'}
             </button>
           </div>
+
+          {/* Public Sharing Options */}
+          <div className="flex items-start gap-3 pt-3 border-t border-gray-100">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700">🌍 공개 피드에 공유하기</span>
+            </label>
+          </div>
+
+          {isPublic && (
+            <div className="pt-2">
+              <input
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="태그 입력 (쉼표로 구분: 데일리, 캐주얼, 출근룩)"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                태그를 입력하면 다른 사람들이 쉽게 발견할 수 있어요!
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-50">
             <span>현재 {layers.length}개 아이템 착용 중</span>
             <div className="flex gap-2">

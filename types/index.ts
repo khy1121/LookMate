@@ -75,9 +75,23 @@ export interface Look {
   name: string;
   items: ClothingItem[]; // 코디 시점의 옷 정보 스냅샷
   layers: FittingLayer[]; // 위치/회전 정보
-  snapshotUrl?: string | null; // 코디 완성 스냅샷 이미지 URL (Future Use)
+  snapshotUrl?: string | null; // 코디 완성 스냅샷 이미지 URL
   createdAt: number;
+  // Public sharing metadata
+  isPublic?: boolean;          // 공개 피드에 발행 여부
+  publicId?: string | null;    // 공개용 고유 ID (URL: /look/:publicId)
+  tags?: string[];             // 사용자 태그 (캐주얼, 데일리, 출근룩 등)
 }
+
+/**
+ * Look → PublicLook 매핑 규칙:
+ * - publicId → PublicLook.id
+ * - currentUser.displayName → PublicLook.ownerName
+ * - snapshotUrl, items → 그대로 복사
+ * - tags → PublicLook.tags
+ * - likeCount, bookmarkCount → PublicLook에서 관리 (초기 0)
+ * - createdAt → 그대로 복사
+ */
 
 // --- Product & Public Look Types ---
 
@@ -109,13 +123,14 @@ export interface Product {
 }
 
 export interface PublicLook {
-  id: string;
+  publicId: string;
+  name: string;
   ownerName: string;
-  ownerAvatarUrl?: string | null;
-  snapshotUrl: string;
+  ownerId: string;
+  snapshotUrl: string | null;
   items: ClothingItem[];
-  likeCount: number;
-  bookmarkCount: number;
+  likesCount: number;
+  bookmarksCount: number;
   createdAt: number;
   tags: string[];
 }

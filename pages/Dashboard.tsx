@@ -7,8 +7,10 @@ import { Season } from '../types';
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = useStore((state) => state.user);
+  const currentUser = useStore((state) => state.currentUser);
   const clothes = useStore((state) => state.clothes);
   const looks = useStore((state) => state.looks);
+  const publicLooks = useStore((state) => state.publicLooks);
   const deleteLook = useStore((state) => state.deleteLook);
   const setActiveLookFromLook = useStore((state) => state.setActiveLookFromLook);
   
@@ -374,6 +376,82 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 내가 공유한 코디 Section */}
+      {currentUser && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">🌍 내가 공유한 코디</h3>
+              <p className="text-sm text-gray-500 mt-1">공개 피드에 공유한 코디들입니다</p>
+            </div>
+            <button
+              onClick={() => navigate('/app/explore')}
+              className="text-indigo-600 text-sm font-medium hover:underline"
+            >
+              전체 피드 보기 →
+            </button>
+          </div>
+
+          {publicLooks.filter((pl) => pl.ownerId === currentUser.id).length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <div className="text-4xl mb-3">🌐</div>
+              <p className="mb-4">아직 공유한 코디가 없습니다.</p>
+              <button
+                onClick={() => navigate('/app/fitting')}
+                className="text-indigo-600 font-medium hover:underline"
+              >
+                피팅룸에서 코디 만들고 공유하기
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {publicLooks
+                .filter((pl) => pl.ownerId === currentUser.id)
+                .map((publicLook) => (
+                  <div
+                    key={publicLook.publicId}
+                    className="bg-gray-50 rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/look/${publicLook.publicId}`)}
+                  >
+                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 mb-3">
+                      {publicLook.snapshotUrl ? (
+                        <img
+                          src={publicLook.snapshotUrl}
+                          alt={publicLook.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                          이미지 없음
+                        </div>
+                      )}
+                    </div>
+                    <h4 className="font-medium text-gray-800 text-sm truncate mb-2">
+                      {publicLook.name}
+                    </h4>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                      <span>❤️ {publicLook.likesCount}</span>
+                      <span>🔖 {publicLook.bookmarksCount}</span>
+                    </div>
+                    {publicLook.tags.length > 0 && (
+                      <div className="flex gap-1 flex-wrap">
+                        {publicLook.tags.slice(0, 2).map((tag, idx) => (
+                          <span key={idx} className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">
+                            #{tag}
+                          </span>
+                        ))}
+                        {publicLook.tags.length > 2 && (
+                          <span className="text-xs text-gray-400">+{publicLook.tags.length - 2}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

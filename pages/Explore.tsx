@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { PublicLook, Product, ClothingItem } from '../types';
-import { fetchPopularLooks } from '../services/publicLookService';
 import { searchSimilarProductsByItem } from '../services/productService';
 import { useStore } from '../store/useStore';
 
@@ -8,8 +7,14 @@ type SortOption = 'recommend' | 'likes' | 'recent';
 type ProductSortOption = 'recommend' | 'priceAsc' | 'priceDesc' | 'sales';
 
 export const Explore: React.FC = () => {
-  const [looks, setLooks] = useState<PublicLook[]>([]);
-  const [loading, setLoading] = useState(true);
+  const publicLooks = useStore((s) => s.publicLooks);
+  const likedPublicLookIds = useStore((s) => s.likedPublicLookIds);
+  const bookmarkedPublicLookIds = useStore((s) => s.bookmarkedPublicLookIds);
+  const toggleLikePublicLook = useStore((s) => s.toggleLikePublicLook);
+  const toggleBookmarkPublicLook = useStore((s) => s.toggleBookmarkPublicLook);
+  const currentUser = useStore((s) => s.currentUser);
+  const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
+
   const [sortBy, setSortBy] = useState<SortOption>('recommend');
   const [selectedLook, setSelectedLook] = useState<PublicLook | null>(null);
   const [selectedItem, setSelectedItem] = useState<ClothingItem | null>(null);
@@ -21,34 +26,15 @@ export const Explore: React.FC = () => {
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
 
-  const currentUser = useStore((s) => s.currentUser);
-  const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
-
-  useEffect(() => {
-    loadLooks();
-  }, []);
-
-  const loadLooks = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchPopularLooks();
-      setLooks(data);
-    } catch (error) {
-      console.error('Failed to load looks', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sortedLooks = [...looks].sort((a, b) => {
+  const sortedLooks = [...publicLooks].sort((a, b) => {
     switch (sortBy) {
       case 'likes':
-        return b.likeCount - a.likeCount;
+        return b.likesCount - a.likesCount;
       case 'recent':
         return b.createdAt - a.createdAt;
       case 'recommend':
       default:
-        return b.likeCount - a.likeCount;
+        return b.likesCount - a.likesCount;
     }
   });
 
@@ -144,101 +130,120 @@ export const Explore: React.FC = () => {
         </button>
       </div>
 
-      {/* Loading State */}
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="text-gray-400">로딩 중...</div>
-        </div>
-      ) : (
-        <>
-          {/* Looks Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {sortedLooks.map((look) => (
-              <div
-                key={look.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedLook(look)}
-              >
-                <div className="aspect-[3/4] bg-gray-100">
-                  <img src={look.snapshotUrl} alt={look.ownerName} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    {look.ownerAvatarUrl && (
-                      <img src={look.ownerAvatarUrl} alt="" className="w-6 h-6 rounded-full" />
-                    )}
-                    <span className="text-sm font-medium text-gray-800 truncate">{look.ownerName}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>❤️ {look.likeCount}</span>
-                    <span>🔖 {look.bookmarkCount}</span>
-                  </div>
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {look.tags.map((tag, idx) => (
-                      <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+      {/* Looks Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {sortedLooks.map((look) => (
+          <div
+            key={look.publicId}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => setSelectedLook(look)}
+          >
+            <div className="aspect-[3/4] bg-gray-100">
+              {look.snapshotUrl && (
+                <img src={look.snapshotUrl} alt={look.name} className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-gray-800 truncate">{look.ownerName}</span>
               </div>
-            ))}
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (currentUser) {
+                      toggleLikePublicLook(look.publicId);
+                    } else {
+                      alert('로그인이 필요합니다.');
+                    }
+                  }}
+                  className={`flex items-center gap-1 ${
+                    likedPublicLookIds.includes(look.publicId) ? 'text-red-500' : ''
+                  }`}
+                >
+                  ❤️ {look.likesCount}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (currentUser) {
+                      toggleBookmarkPublicLook(look.publicId);
+                    } else {
+                      alert('로그인이 필요합니다.');
+                    }
+                  }}
+                  className={`flex items-center gap-1 ${
+                    bookmarkedPublicLookIds.includes(look.publicId) ? 'text-blue-500' : ''
+                  }`}
+                >
+                  🔖 {look.bookmarksCount}
+                </button>
+              </div>
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {look.tags.map((tag, idx) => (
+                  <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
+        ))}
+      </div>
 
-          {/* Detail Modal */}
-          {selectedLook && (
-            <div
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-              onClick={() => {
-                setSelectedLook(null);
-                setSelectedItem(null);
-                setSimilarProducts([]);
-              }}
-            >
-              <div
-                className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6">
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {selectedLook.ownerAvatarUrl && (
-                        <img src={selectedLook.ownerAvatarUrl} alt="" className="w-10 h-10 rounded-full" />
-                      )}
-                      <div>
-                        <h3 className="font-bold text-gray-800">{selectedLook.ownerName}</h3>
-                        <div className="flex gap-3 text-sm text-gray-500">
-                          <span>❤️ {selectedLook.likeCount}</span>
-                          <span>🔖 {selectedLook.bookmarkCount}</span>
-                        </div>
-                      </div>
+      {/* Detail Modal */}
+      {selectedLook && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setSelectedLook(null);
+            setSelectedItem(null);
+            setSimilarProducts([]);
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h3 className="font-bold text-gray-800">{selectedLook.ownerName}</h3>
+                    <div className="flex gap-3 text-sm text-gray-500">
+                      <span>❤️ {selectedLook.likesCount}</span>
+                      <span>🔖 {selectedLook.bookmarksCount}</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedLook(null);
-                        setSelectedItem(null);
-                        setSimilarProducts([]);
-                      }}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ✕
-                    </button>
                   </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedLook(null);
+                    setSelectedItem(null);
+                    setSimilarProducts([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
 
-                  {/* Snapshot */}
-                  <div className="mb-6">
-                    <img src={selectedLook.snapshotUrl} alt="" className="w-full rounded-lg" />
-                  </div>
+              {/* Snapshot */}
+              {selectedLook.snapshotUrl && (
+                <div className="mb-6">
+                  <img src={selectedLook.snapshotUrl} alt={selectedLook.name} className="w-full rounded-lg" />
+                </div>
+              )}
 
-                  {/* Tags */}
-                  <div className="flex gap-2 mb-6">
-                    {selectedLook.tags.map((tag, idx) => (
-                      <span key={idx} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+              {/* Tags */}
+              <div className="flex gap-2 mb-6">
+                {selectedLook.tags.map((tag, idx) => (
+                  <span key={idx} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm">
+                    {tag}
+                  </span>
+                ))}
+              </div>
 
                   {/* Items */}
                   <h4 className="font-bold text-gray-800 mb-3">이 코디에 포함된 아이템</h4>
@@ -352,8 +357,6 @@ export const Explore: React.FC = () => {
               </div>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 };

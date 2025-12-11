@@ -10,6 +10,7 @@ import { Avatar } from './pages/Avatar';
 import { Fitting } from './pages/Fitting';
 import { Explore } from './pages/Explore';
 import { Discover } from './pages/Discover';
+import { LookDetail } from './pages/LookDetail';
 import { useStore } from './store/useStore';
 
 export const App = () => {
@@ -22,8 +23,9 @@ export const App = () => {
 
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Routes */}
       <Route path="/" element={<Login />} />
+      <Route path="/look/:publicId" element={<LookDetail />} />
 
       {/* Private Routes - Protected */}
       <Route
