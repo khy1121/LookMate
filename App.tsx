@@ -7,6 +7,8 @@ import { Closet } from './pages/Closet';
 import { Upload } from './pages/Upload';
 import { Avatar } from './pages/Avatar';
 import { Fitting } from './pages/Fitting';
+import { Explore } from './pages/Explore';
+import { Discover } from './pages/Discover';
 import { useStore } from './store/useStore';
 
 // 인증 보호용 Wrapper (간단 버전)
@@ -39,6 +41,8 @@ export const App = () => {
         <Route path="upload" element={<Upload />} />
         <Route path="avatar" element={<Avatar />} />
         <Route path="fitting" element={<Fitting />} />
+        <Route path="explore" element={<Explore />} />
+        <Route path="discover" element={<Discover />} />
       </Route>
       
       {/* Fallback */}

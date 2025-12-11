@@ -58,3 +58,39 @@ export interface Look {
   snapshotUrl?: string | null; // 코디 완성 스냅샷 이미지 URL (Future Use)
   createdAt: number;
 }
+
+// --- Product & Public Look Types ---
+
+export interface Product {
+  id: string;
+  name: string;
+  brand?: string | null;
+  thumbnailUrl: string;
+  productUrl: string;        // 외부 쇼핑몰 링크
+  price: number;             // 원 단위
+  currency: 'KRW';
+  category?: Category | null;
+  similarityScore?: number;  // 0~1 사이 유사도
+  rating?: number | null;    // 평점 (0~5)
+  reviewCount?: number | null;
+  salesVolumeScore?: number | null; // 판매량 기반 점수
+  tags?: string[];
+}
+
+export interface PublicLook {
+  id: string;
+  ownerName: string;
+  ownerAvatarUrl?: string | null;
+  snapshotUrl: string;
+  items: ClothingItem[];
+  likeCount: number;
+  bookmarkCount: number;
+  createdAt: number;
+  tags: string[];
+}
+
+export interface ImageSearchResult {
+  queryImageUrl: string;
+  detectedCategory?: Category | null;
+  products: Product[];
+}

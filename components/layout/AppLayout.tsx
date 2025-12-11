@@ -6,6 +6,8 @@ const NAV_ITEMS = [
   { path: '/app/dashboard', label: '홈', icon: '🏠' },
   { path: '/app/closet', label: '옷장', icon: '👕' },
   { path: '/app/fitting', label: '피팅', icon: '🕴️' },
+  { path: '/app/explore', label: 'Explore', icon: '🌐' },
+  { path: '/app/discover', label: 'Discover', icon: '📷' },
   { path: '/app/upload', label: '업로드', icon: '➕' },
   { path: '/app/avatar', label: '내 정보', icon: '👤' },
 ];

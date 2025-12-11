@@ -140,6 +140,43 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Explore & Discover Quick Links */}
+      <div className="grid md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">🌐 인기 코디 둘러보기</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                다른 사람들의 코디를 보고 쇼핑 아이디어를 얻어보세요.
+              </p>
+              <button
+                onClick={() => navigate('/app/explore')}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+              >
+                Explore 바로가기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-pink-50 to-orange-50 p-6 rounded-2xl border border-pink-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">📷 이미지로 유사 상품 찾기</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                마음에 드는 옷 사진을 업로드하면 비슷한 상품을 찾아드려요.
+              </p>
+              <button
+                onClick={() => navigate('/app/discover')}
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 transition-colors"
+              >
+                Discover 바로가기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 오늘의 추천 코디 섹션 */}
       <div className="my-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4">🎨 오늘의 추천 코디</h3>
