@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ToastContainer } from './components/common/ToastContainer';
 
 const container = document.getElementById('root');
 if (container) {
@@ -12,6 +13,7 @@ if (container) {
       <ErrorBoundary>
         <BrowserRouter>
           <App />
+          <ToastContainer />
         </BrowserRouter>
       </ErrorBoundary>
     </React.StrictMode>

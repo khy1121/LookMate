@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { PublicLook, Product, ClothingItem } from '../types';
 import { searchSimilarProductsByItem } from '../services/productService';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
+import { ProductCard } from '../components/common/ProductCard';
+import { Skeleton } from '../components/common/Skeleton';
 
 type SortOption = 'recommend' | 'likes' | 'recent';
 type ProductSortOption = 'recommend' | 'priceAsc' | 'priceDesc' | 'sales';
@@ -14,6 +17,7 @@ export const Explore: React.FC = () => {
   const toggleBookmarkPublicLook = useStore((s) => s.toggleBookmarkPublicLook);
   const currentUser = useStore((s) => s.currentUser);
   const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
+  const showToast = useUiStore((s) => s.showToast);
 
   const [sortBy, setSortBy] = useState<SortOption>('recommend');
   const [selectedLook, setSelectedLook] = useState<PublicLook | null>(null);
@@ -77,15 +81,15 @@ export const Explore: React.FC = () => {
 
   const handleAddToCloset = (product: Product) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast('로그인이 필요합니다.', 'error');
       return;
     }
     
     try {
       addClothingFromProduct(product);
-      alert(`"${product.name}"이(가) 옷장에 추가되었습니다!`);
+      showToast(`"${product.name}"이(가) 옷장에 추가되었습니다!`, 'success');
     } catch (error: any) {
-      alert(error.message || '옷장에 추가하는 중 오류가 발생했습니다.');
+      showToast(error.message || '옷장에 추가하는 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -154,12 +158,13 @@ export const Explore: React.FC = () => {
                     if (currentUser) {
                       toggleLikePublicLook(look.publicId);
                     } else {
-                      alert('로그인이 필요합니다.');
+                      showToast('로그인이 필요합니다.', 'error');
                     }
                   }}
                   className={`flex items-center gap-1 ${
                     likedPublicLookIds.includes(look.publicId) ? 'text-red-500' : ''
                   }`}
+                  aria-label={`${look.name} 좋아요`}
                 >
                   ❤️ {look.likesCount}
                 </button>
@@ -169,12 +174,13 @@ export const Explore: React.FC = () => {
                     if (currentUser) {
                       toggleBookmarkPublicLook(look.publicId);
                     } else {
-                      alert('로그인이 필요합니다.');
+                      showToast('로그인이 필요합니다.', 'error');
                     }
                   }}
                   className={`flex items-center gap-1 ${
                     bookmarkedPublicLookIds.includes(look.publicId) ? 'text-blue-500' : ''
                   }`}
+                  aria-label={`${look.name} 북마크`}
                 >
                   🔖 {look.bookmarksCount}
                 </button>
@@ -251,7 +257,7 @@ export const Explore: React.FC = () => {
                     {selectedLook.items.map((item) => (
                       <div key={item.id} className="bg-gray-50 rounded-lg p-3">
                         <div className="aspect-square bg-white rounded mb-2 flex items-center justify-center">
-                          <img src={item.imageUrl} alt="" className="max-w-full max-h-full object-contain" />
+                          <img src={item.imageUrl} alt={`${item.category} - ${item.color}`} className="max-w-full max-h-full object-contain" />
                         </div>
                         <p className="text-xs font-semibold text-gray-700">{item.category}</p>
                         <p className="text-xs text-gray-500">{item.color}</p>
@@ -320,34 +326,29 @@ export const Explore: React.FC = () => {
                       </div>
 
                       {loadingProducts ? (
-                        <div className="text-center py-8 text-gray-400">상품 검색 중...</div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden p-2">
+                              <Skeleton className="w-full aspect-[3/4] mb-2" />
+                              <Skeleton className="h-3 w-3/4 mb-1" variant="text" />
+                              <Skeleton className="h-3 w-1/2 mb-2" variant="text" />
+                              <Skeleton className="h-4 w-1/3 mb-2" variant="text" />
+                              <div className="flex gap-1">
+                                <Skeleton className="flex-1 h-7" />
+                                <Skeleton className="flex-1 h-7" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {similarProducts.map((product) => (
-                            <div key={product.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                              <img src={product.thumbnailUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                              <div className="p-2">
-                                <p className="text-xs font-semibold text-gray-800 truncate">{product.name}</p>
-                                <p className="text-xs text-gray-500 truncate">{product.brand}</p>
-                                <p className="text-sm font-bold text-gray-900 mt-1">
-                                  ₩{product.price.toLocaleString()}
-                                </p>
-                                <div className="flex gap-1 mt-2">
-                                  <button
-                                    onClick={() => handleAddToCloset(product)}
-                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1.5 rounded transition-colors"
-                                  >
-                                    + 옷장에 추가
-                                  </button>
-                                  <button
-                                    onClick={() => window.open(product.productUrl, '_blank', 'noopener,noreferrer')}
-                                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1.5 rounded transition-colors"
-                                  >
-                                    구매하기
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
+                            <ProductCard
+                              key={product.id}
+                              product={product}
+                              onAddToCloset={() => handleAddToCloset(product)}
+                              onOpenLink={() => {}}
+                            />
                           ))}
                         </div>
                       )}

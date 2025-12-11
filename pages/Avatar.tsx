@@ -1,12 +1,14 @@
 
 import React, { useState, ChangeEvent } from 'react';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
 import { aiService } from '../services/aiService';
 import { BodyType, Gender } from '../types';
 
 export const Avatar: React.FC = () => {
   const user = useStore((state) => state.user);
   const updateUser = useStore((state) => state.updateUser);
+  const showToast = useUiStore((s) => s.showToast);
 
   // Form State
   const [height, setHeight] = useState<number>(user?.height || 170);
@@ -40,10 +42,10 @@ export const Avatar: React.FC = () => {
       });
       
       setPreviewAvatar(newAvatarUrl);
-      alert('아바타가 성공적으로 생성되었습니다!');
+      showToast('아바타가 성공적으로 생성되었습니다!', 'success');
     } catch (e) {
       console.error(e);
-      alert('아바타 생성 중 오류가 발생했습니다.');
+      showToast('아바타 생성 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsProcessing(false);
     }

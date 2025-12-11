@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
 import { PublicLook, Product } from '../types';
 import { searchSimilarProductsByItem } from '../services/productService';
+import { ProductCard } from '../components/common/ProductCard';
+import { Skeleton } from '../components/common/Skeleton';
 
 export const LookDetail: React.FC = () => {
   const { publicId } = useParams<{ publicId: string }>();
@@ -15,6 +18,7 @@ export const LookDetail: React.FC = () => {
   const toggleLikePublicLook = useStore((s) => s.toggleLikePublicLook);
   const toggleBookmarkPublicLook = useStore((s) => s.toggleBookmarkPublicLook);
   const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
+  const showToast = useUiStore((s) => s.showToast);
 
   const [look, setLook] = useState<PublicLook | null>(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -29,7 +33,7 @@ export const LookDetail: React.FC = () => {
 
     const foundLook = getPublicLookById(publicId);
     if (!foundLook) {
-      alert('코디를 찾을 수 없습니다.');
+      showToast('코디를 찾을 수 없습니다.', 'error');
       navigate('/app/explore');
       return;
     }
@@ -53,10 +57,10 @@ export const LookDetail: React.FC = () => {
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        alert('링크가 클립보드에 복사되었습니다! 📋');
+        showToast('링크가 클립보드에 복사되었습니다! 📋', 'success');
       } catch (err) {
         console.error('클립보드 복사 실패:', err);
-        alert('링크 복사에 실패했습니다.');
+        showToast('링크 복사에 실패했습니다.', 'error');
       }
     }
   };
@@ -83,17 +87,17 @@ export const LookDetail: React.FC = () => {
 
   const handleAddToCloset = (product: Product) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast('로그인이 필요합니다.', 'error');
       navigate('/');
       return;
     }
 
     try {
       addClothingFromProduct(product);
-      alert(`${product.name}이(가) 옷장에 추가되었습니다! 🎉`);
+      showToast(`${product.name}이(가) 옷장에 추가되었습니다! 🎉`, 'success');
     } catch (err) {
       console.error('옷장 추가 실패:', err);
-      alert('옷장에 추가하는 중 오류가 발생했습니다.');
+      showToast('옷장에 추가하는 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -147,7 +151,7 @@ export const LookDetail: React.FC = () => {
                 if (currentUser) {
                   toggleLikePublicLook(look.publicId);
                 } else {
-                  alert('로그인이 필요합니다.');
+                  showToast('로그인이 필요합니다.', 'info');
                   navigate('/');
                 }
               }}
@@ -164,7 +168,7 @@ export const LookDetail: React.FC = () => {
                 if (currentUser) {
                   toggleBookmarkPublicLook(look.publicId);
                 } else {
-                  alert('로그인이 필요합니다.');
+                  showToast('로그인이 필요합니다.', 'info');
                   navigate('/');
                 }
               }}
@@ -213,7 +217,7 @@ export const LookDetail: React.FC = () => {
                   onClick={() => handleViewSimilarProducts(idx)}
                 >
                   <div className="w-16 h-16 bg-white rounded-lg p-1 flex items-center justify-center">
-                    <img src={item.imageUrl} alt="" className="max-w-full max-h-full object-contain" />
+                    <img src={item.imageUrl} alt={`${item.category} - ${item.color}`} className="max-w-full max-h-full object-contain" />
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-800">{item.brand || '브랜드 미상'}</div>

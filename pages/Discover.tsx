@@ -2,6 +2,9 @@ import React, { useState, ChangeEvent } from 'react';
 import { ImageSearchResult, Product } from '../types';
 import { searchSimilarProductsByImage, ProductSearchOptions } from '../services/productService';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
+import { ProductCard } from '../components/common/ProductCard';
+import { Skeleton } from '../components/common/Skeleton';
 
 type SortOption = 'recommend' | 'priceAsc' | 'priceDesc' | 'sales';
 
@@ -16,6 +19,7 @@ export const Discover: React.FC = () => {
 
   const currentUser = useStore((s) => s.currentUser);
   const addClothingFromProduct = useStore((s) => s.addClothingFromProduct);
+  const showToast = useUiStore((s) => s.showToast);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -40,7 +44,7 @@ export const Discover: React.FC = () => {
       setSearchResult(result);
     } catch (error) {
       console.error('Search failed', error);
-      alert('검색 중 오류가 발생했습니다.');
+      showToast('검색 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -81,15 +85,15 @@ export const Discover: React.FC = () => {
 
   const handleAddToCloset = (product: Product) => {
     if (!currentUser) {
-      alert('로그인이 필요합니다.');
+      showToast('로그인이 필요합니다.', 'error');
       return;
     }
     
     try {
       addClothingFromProduct(product);
-      alert(`"${product.name}"이(가) 옷장에 추가되었습니다!`);
+      showToast(`"${product.name}"이(가) 옷장에 추가되었습니다!`, 'success');
     } catch (error: any) {
-      alert(error.message || '옷장에 추가하는 중 오류가 발생했습니다.');
+      showToast(error.message || '옷장에 추가하는 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -219,8 +223,19 @@ export const Discover: React.FC = () => {
               <p>이미지를 업로드하고 검색해보세요.</p>
             </div>
           ) : loading ? (
-            <div className="flex justify-center items-center py-20 text-gray-400">
-              <div>검색 중...</div>
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white border border-gray-200 rounded-lg p-3">
+                  <Skeleton className="w-full aspect-[3/4] mb-2" />
+                  <Skeleton className="h-4 w-3/4 mb-1" variant="text" />
+                  <Skeleton className="h-3 w-1/2 mb-2" variant="text" />
+                  <Skeleton className="h-5 w-1/3 mb-2" variant="text" />
+                  <div className="flex gap-1">
+                    <Skeleton className="flex-1 h-8" />
+                    <Skeleton className="flex-1 h-8" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : searchResult.products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -230,41 +245,12 @@ export const Discover: React.FC = () => {
           ) : (
             <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
               {searchResult.products.map((product) => (
-                <div
+                <ProductCard
                   key={product.id}
-                  className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <img src={product.thumbnailUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                  <div className="p-3">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{product.brand}</p>
-                    <p className="text-base font-bold text-gray-900 mt-1">
-                      ₩{product.price.toLocaleString()}
-                    </p>
-                    {product.similarityScore && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs text-gray-500">유사도:</span>
-                        <span className="text-xs font-medium text-indigo-600">
-                          {Math.round(product.similarityScore * 100)}%
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex gap-1 mt-2">
-                      <button
-                        onClick={() => handleAddToCloset(product)}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2 rounded transition-colors font-medium"
-                      >
-                        + 옷장
-                      </button>
-                      <button
-                        onClick={() => window.open(product.productUrl, '_blank', 'noopener,noreferrer')}
-                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-2 rounded transition-colors font-medium"
-                      >
-                        구매
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  product={product}
+                  onAddToCloset={() => handleAddToCloset(product)}
+                  onOpenLink={() => {}}
+                />
               ))}
             </div>
           )}

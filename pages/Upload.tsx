@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
 import { aiService } from '../services/aiService';
 import { Category, Season } from '../types';
 
@@ -8,6 +9,7 @@ export const Upload: React.FC = () => {
   const navigate = useNavigate();
   const addClothing = useStore((state) => state.addClothing);
   const user = useStore((state) => state.user);
+  const showToast = useUiStore((s) => s.showToast);
 
   // Form State
   const [file, setFile] = useState<File | null>(null);
@@ -79,7 +81,7 @@ export const Upload: React.FC = () => {
       navigate('/app/closet');
     } catch (error) {
       console.error('Upload failed', error);
-      alert('옷 등록 중 오류가 발생했습니다.');
+      showToast('옷 등록 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsProcessing(false);
     }

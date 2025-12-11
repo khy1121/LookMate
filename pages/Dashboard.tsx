@@ -3,6 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { Season } from '../types';
+import { LookCard } from '../components/common/LookCard';
+import { SectionHeader } from '../components/common/SectionHeader';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -257,7 +259,7 @@ export const Dashboard: React.FC = () => {
 
       {/* 사용 통계 섹션 */}
       <div className="my-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">📊 자주 사용하는 아이템 TOP 3</h3>
+        <SectionHeader title="📊 자주 사용하는 아이템 TOP 3" />
         {itemUsageStats.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 text-center text-gray-400">
             <span className="text-4xl mb-2 block">📈</span>
@@ -271,7 +273,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex gap-3 mb-3">
                   <div className="relative">
                     <div className="w-16 h-16 bg-gray-50 rounded-lg p-2 flex items-center justify-center">
-                      <img src={stat.item.imageUrl} alt="" className="max-w-full max-h-full object-contain" />
+                      <img src={stat.item.imageUrl} alt={`${stat.item.category} - ${stat.item.color}`} className="max-w-full max-h-full object-contain" />
                     </div>
                     <div className="absolute -top-2 -left-2 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                       {index + 1}
@@ -306,7 +308,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="my-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">저장된 코디 (Looks)</h3>
+        <SectionHeader title="저장된 코디 (Looks)" />
         {looks.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 text-center text-gray-400 flex flex-col items-center justify-center">
             <span className="text-4xl mb-2">🧥</span>
@@ -316,25 +318,33 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {looks.map((look) => (
-              <div key={look.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow">
-                
-                {/* Snapshot Thumbnail */}
-                <div className="mb-3 aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                  {look.snapshotUrl ? (
-                    <img
-                      src={look.snapshotUrl}
-                      alt={look.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-400">미리보기 없음</span>
-                  )}
-                </div>
-
+              <LookCard
+                key={look.id}
+                snapshotUrl={look.snapshotUrl}
+                name={look.name}
+                tags={[]}
+                onClick={() => handleLoadLook(look.id)}
+                footerSlot={
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleLoadLook(look.id); }}
+                      className="flex-1 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-sm hover:bg-indigo-100 transition-colors"
+                    >
+                      입어보기
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); if(confirm('이 코디를 삭제하시겠습니까?')) deleteLook(look.id); }}
+                      className="px-3 py-2 bg-white border border-gray-200 text-gray-400 rounded-lg hover:text-red-500 hover:border-red-200 transition-colors"
+                      aria-label={`${look.name} 삭제`}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                }
+              >
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h4 className="font-bold text-gray-800 text-lg">{look.name}</h4>
-                    <span className="text-xs text-gray-400">
+                  <div className="flex-1">
+                    <span className="text-xs text-gray-400 block">
                       {new Date(look.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -342,12 +352,10 @@ export const Dashboard: React.FC = () => {
                     {look.items.length} items
                   </div>
                 </div>
-
-                {/* Items Preview (Mini Thumbnails) */}
-                <div className="flex gap-1 mb-4 overflow-hidden h-10">
+                <div className="flex gap-1 overflow-hidden h-10">
                   {look.items.slice(0, 5).map((item) => (
                     <div key={item.id} className="w-10 h-10 bg-gray-50 rounded p-1 border border-gray-100">
-                      <img src={item.imageUrl} alt="" className="w-full h-full object-contain" />
+                      <img src={item.imageUrl} alt={item.category} className="w-full h-full object-contain" />
                     </div>
                   ))}
                   {look.items.length > 5 && (
@@ -356,22 +364,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-                <div className="mt-auto flex gap-2">
-                  <button 
-                    onClick={() => handleLoadLook(look.id)}
-                    className="flex-1 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-lg text-sm hover:bg-indigo-100 transition-colors"
-                  >
-                    입어보기
-                  </button>
-                  <button 
-                    onClick={() => { if(confirm('이 코디를 삭제하시겠습니까?')) deleteLook(look.id); }}
-                    className="px-3 py-2 bg-white border border-gray-200 text-gray-400 rounded-lg hover:text-red-500 hover:border-red-200 transition-colors"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+              </LookCard>
             ))}
           </div>
         )}
@@ -380,18 +373,18 @@ export const Dashboard: React.FC = () => {
       {/* 내가 공유한 코디 Section */}
       {currentUser && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">🌍 내가 공유한 코디</h3>
-              <p className="text-sm text-gray-500 mt-1">공개 피드에 공유한 코디들입니다</p>
-            </div>
-            <button
-              onClick={() => navigate('/app/explore')}
-              className="text-indigo-600 text-sm font-medium hover:underline"
-            >
-              전체 피드 보기 →
-            </button>
-          </div>
+          <SectionHeader 
+            title="🌍 내가 공유한 코디"
+            subtitle="공개 피드에 공유한 코디들입니다"
+            actionSlot={
+              <button
+                onClick={() => navigate('/app/explore')}
+                className="text-indigo-600 text-sm font-medium hover:underline"
+              >
+                전체 피드 보기 →
+              </button>
+            }
+          />
 
           {publicLooks.filter((pl) => pl.ownerId === currentUser.id).length === 0 ? (
             <div className="text-center py-12 text-gray-400">
@@ -409,44 +402,15 @@ export const Dashboard: React.FC = () => {
               {publicLooks
                 .filter((pl) => pl.ownerId === currentUser.id)
                 .map((publicLook) => (
-                  <div
+                  <LookCard
                     key={publicLook.publicId}
-                    className="bg-gray-50 rounded-xl p-3 hover:shadow-md transition-shadow cursor-pointer"
+                    snapshotUrl={publicLook.snapshotUrl}
+                    name={publicLook.name}
+                    tags={publicLook.tags}
+                    likesCount={publicLook.likesCount}
+                    bookmarksCount={publicLook.bookmarksCount}
                     onClick={() => navigate(`/look/${publicLook.publicId}`)}
-                  >
-                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 mb-3">
-                      {publicLook.snapshotUrl ? (
-                        <img
-                          src={publicLook.snapshotUrl}
-                          alt={publicLook.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          이미지 없음
-                        </div>
-                      )}
-                    </div>
-                    <h4 className="font-medium text-gray-800 text-sm truncate mb-2">
-                      {publicLook.name}
-                    </h4>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                      <span>❤️ {publicLook.likesCount}</span>
-                      <span>🔖 {publicLook.bookmarksCount}</span>
-                    </div>
-                    {publicLook.tags.length > 0 && (
-                      <div className="flex gap-1 flex-wrap">
-                        {publicLook.tags.slice(0, 2).map((tag, idx) => (
-                          <span key={idx} className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">
-                            #{tag}
-                          </span>
-                        ))}
-                        {publicLook.tags.length > 2 && (
-                          <span className="text-xs text-gray-400">+{publicLook.tags.length - 2}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  />
                 ))}
             </div>
           )}

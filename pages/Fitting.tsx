@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { useUiStore } from '../store/useUiStore';
 import { Link, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
@@ -14,6 +15,7 @@ export const Fitting: React.FC = () => {
   const clearActiveLook = useStore((state) => state.clearActiveLook);
   const createLookFromActive = useStore((state) => state.createLookFromActive);
   const publishLook = useStore((state) => state.publishLook);
+  const showToast = useUiStore((state) => state.showToast);
 
   const layers = activeLook?.layers || [];
   
@@ -35,11 +37,11 @@ export const Fitting: React.FC = () => {
 
   const handleSaveLook = async () => {
     if (!activeLook || layers.length === 0) {
-      alert('저장할 코디가 없습니다.');
+      showToast('저장할 코디가 없습니다.', 'error');
       return;
     }
     if (!lookName.trim()) {
-      alert('코디 이름을 입력해주세요.');
+      showToast('코디 이름을 입력해주세요.', 'error');
       return;
     }
 
@@ -59,7 +61,10 @@ export const Fitting: React.FC = () => {
       setLookName('');
       setIsPublic(false);
       setTagsInput('');
-      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾');
+      showToast(
+        isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾',
+        'success'
+      );
       return;
     }
 
@@ -85,7 +90,10 @@ export const Fitting: React.FC = () => {
       setLookName('');
       setIsPublic(false);
       setTagsInput('');
-      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾');
+      showToast(
+        isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다! 🌍' : '현재 코디가 저장되었습니다! 💾',
+        'success'
+      );
     } catch (err) {
       console.error('스냅샷 생성 실패', err);
       // 실패 시에도 최소한 데이터는 저장되도록 fallback
@@ -102,7 +110,10 @@ export const Fitting: React.FC = () => {
       setLookName('');
       setIsPublic(false);
       setTagsInput('');
-      alert(isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다 (미리보기 생성 실패)' : '코디가 저장되었습니다 (미리보기 생성 실패)');
+      showToast(
+        isPublic ? '코디가 저장되고 공개 피드에 공유되었습니다 (미리보기 생성 실패)' : '코디가 저장되었습니다 (미리보기 생성 실패)',
+        'info'
+      );
     } finally {
       setSaving(false);
     }
@@ -263,7 +274,7 @@ export const Fitting: React.FC = () => {
                   <div className="flex gap-3 mb-3 border-b border-gray-50 pb-3">
                     {/* Thumbnail */}
                     <div className="w-12 h-12 bg-gray-50 rounded-lg p-1 flex items-center justify-center">
-                      <img src={item.imageUrl} alt="" className="max-w-full max-h-full object-contain" />
+                      <img src={item.imageUrl} alt={`${item.category} - ${item.color}`} className="max-w-full max-h-full object-contain" />
                     </div>
                     
                     {/* Title & Toggle */}
