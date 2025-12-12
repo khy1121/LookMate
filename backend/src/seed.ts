@@ -2,6 +2,15 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Simple SVG placeholder generator to avoid external requests during dev
+const svgPlaceholder = (w: number, h: number, text: string, bg = '4F46E5', fg = 'FFFFFF') => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>` +
+    `<rect width='100%' height='100%' fill='#${bg}'/>` +
+    `<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='${Math.floor(Math.min(w, h) / 10)}' fill='#${fg}'>${text}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 async function main() {
   console.log('🌱 Starting database seed...');
 
@@ -18,7 +27,7 @@ async function main() {
       email: 'demo1@lookmate.com',
       name: 'Fashion Lover',
       displayName: 'Fashion Lover',
-      avatarUrl: 'https://via.placeholder.com/400x800?text=Avatar+1',
+      avatarUrl: svgPlaceholder(400, 800, 'Avatar 1'),
       height: 170,
       bodyType: 'normal',
       gender: 'female',
@@ -31,7 +40,7 @@ async function main() {
       email: 'demo2@lookmate.com',
       name: 'Style Master',
       displayName: 'Style Master',
-      avatarUrl: 'https://via.placeholder.com/400x800?text=Avatar+2',
+      avatarUrl: svgPlaceholder(400, 800, 'Avatar 2'),
       height: 175,
       bodyType: 'slim',
       gender: 'male',
@@ -46,8 +55,8 @@ async function main() {
       id: 'item-1',
       userId: user1.id,
       category: 'top',
-      imageUrl: 'https://via.placeholder.com/400x400/ffffff/000000?text=White+Tshirt',
-      originalImageUrl: 'https://via.placeholder.com/400x400/ffffff/000000?text=White+Tshirt',
+      imageUrl: svgPlaceholder(400, 400, 'White Tshirt', 'ffffff', '000000'),
+      originalImageUrl: svgPlaceholder(400, 400, 'White Tshirt', 'ffffff', '000000'),
       color: 'white',
       season: 'summer',
       brand: 'Uniqlo',
@@ -64,8 +73,8 @@ async function main() {
       id: 'item-2',
       userId: user1.id,
       category: 'bottom',
-      imageUrl: 'https://via.placeholder.com/400x400/1a1a2e/ffffff?text=Black+Jeans',
-      originalImageUrl: 'https://via.placeholder.com/400x400/1a1a2e/ffffff?text=Black+Jeans',
+      imageUrl: svgPlaceholder(400, 400, 'Black Jeans', '1a1a2e', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Black Jeans', '1a1a2e', 'ffffff'),
       color: 'black',
       season: 'fall',
       brand: 'Levi\'s',
@@ -82,8 +91,8 @@ async function main() {
       id: 'item-3',
       userId: user1.id,
       category: 'outer',
-      imageUrl: 'https://via.placeholder.com/400x400/3d5a80/ffffff?text=Navy+Jacket',
-      originalImageUrl: 'https://via.placeholder.com/400x400/3d5a80/ffffff?text=Navy+Jacket',
+      imageUrl: svgPlaceholder(400, 400, 'Navy Jacket', '3d5a80', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Navy Jacket', '3d5a80', 'ffffff'),
       color: 'navy',
       season: 'winter',
       brand: 'The North Face',
@@ -100,8 +109,8 @@ async function main() {
       id: 'item-4',
       userId: user1.id,
       category: 'shoes',
-      imageUrl: 'https://via.placeholder.com/400x400/e5e5e5/000000?text=White+Sneakers',
-      originalImageUrl: 'https://via.placeholder.com/400x400/e5e5e5/000000?text=White+Sneakers',
+      imageUrl: svgPlaceholder(400, 400, 'White Sneakers', 'e5e5e5', '000000'),
+      originalImageUrl: svgPlaceholder(400, 400, 'White Sneakers', 'e5e5e5', '000000'),
       color: 'white',
       brand: 'Nike',
       size: '250',
@@ -118,8 +127,8 @@ async function main() {
       id: 'item-5',
       userId: user1.id,
       category: 'accessory',
-      imageUrl: 'https://via.placeholder.com/400x400/c69b7b/ffffff?text=Brown+Bag',
-      originalImageUrl: 'https://via.placeholder.com/400x400/c69b7b/ffffff?text=Brown+Bag',
+      imageUrl: svgPlaceholder(400, 400, 'Brown Bag', 'c69b7b', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Brown Bag', 'c69b7b', 'ffffff'),
       color: 'brown',
       brand: 'Coach',
       tags: JSON.stringify(['leather', 'crossbody']),
@@ -136,8 +145,8 @@ async function main() {
       id: 'item-6',
       userId: user2.id,
       category: 'top',
-      imageUrl: 'https://via.placeholder.com/400x400/000000/ffffff?text=Black+Shirt',
-      originalImageUrl: 'https://via.placeholder.com/400x400/000000/ffffff?text=Black+Shirt',
+      imageUrl: svgPlaceholder(400, 400, 'Black Shirt', '000000', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Black Shirt', '000000', 'ffffff'),
       color: 'black',
       season: 'spring',
       brand: 'Zara',
@@ -154,8 +163,8 @@ async function main() {
       id: 'item-7',
       userId: user2.id,
       category: 'bottom',
-      imageUrl: 'https://via.placeholder.com/400x400/8b7355/ffffff?text=Beige+Pants',
-      originalImageUrl: 'https://via.placeholder.com/400x400/8b7355/ffffff?text=Beige+Pants',
+      imageUrl: svgPlaceholder(400, 400, 'Beige Pants', '8b7355', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Beige Pants', '8b7355', 'ffffff'),
       color: 'beige',
       season: 'spring',
       brand: 'Gap',
@@ -172,8 +181,8 @@ async function main() {
       id: 'item-8',
       userId: user2.id,
       category: 'onepiece',
-      imageUrl: 'https://via.placeholder.com/400x400/4a5759/ffffff?text=Gray+Suit',
-      originalImageUrl: 'https://via.placeholder.com/400x400/4a5759/ffffff?text=Gray+Suit',
+      imageUrl: svgPlaceholder(400, 400, 'Gray Suit', '4a5759', 'ffffff'),
+      originalImageUrl: svgPlaceholder(400, 400, 'Gray Suit', '4a5759', 'ffffff'),
       color: 'gray',
       season: 'fall',
       brand: 'Hugo Boss',
@@ -200,7 +209,7 @@ async function main() {
         { clothingId: 'item-2', x: 0, y: 100, scale: 1, rotation: 0, visible: true },
         { clothingId: 'item-4', x: 0, y: 250, scale: 0.8, rotation: 0, visible: true },
       ]),
-      snapshotUrl: 'https://via.placeholder.com/400x800/f0f0f0/333333?text=Summer+Look',
+      snapshotUrl: svgPlaceholder(400, 800, 'Summer Look', 'f0f0f0', '333333'),
       isPublic: true,
       tags: JSON.stringify(['casual', 'summer', 'daily']),
     },
@@ -217,7 +226,7 @@ async function main() {
         { clothingId: 'item-2', x: 0, y: 120, scale: 1, rotation: 0, visible: true },
         { clothingId: 'item-3', x: 0, y: -100, scale: 1.1, rotation: 0, visible: true },
       ]),
-      snapshotUrl: 'https://via.placeholder.com/400x800/e0e0e0/666666?text=Winter+Look',
+      snapshotUrl: svgPlaceholder(400, 800, 'Winter Look', 'e0e0e0', '666666'),
       isPublic: false,
       tags: JSON.stringify(['winter', 'outdoor']),
     },
@@ -234,7 +243,7 @@ async function main() {
         { clothingId: 'item-6', x: 0, y: -40, scale: 1, rotation: 0, visible: true },
         { clothingId: 'item-7', x: 0, y: 110, scale: 1, rotation: 0, visible: true },
       ]),
-      snapshotUrl: 'https://via.placeholder.com/400x800/fafafa/444444?text=Business+Look',
+      snapshotUrl: svgPlaceholder(400, 800, 'Business Look', 'fafafa', '444444'),
       isPublic: true,
       tags: JSON.stringify(['business', 'casual', 'office']),
     },

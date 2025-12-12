@@ -26,6 +26,10 @@
  */
 
 import { AuthUser } from '../types';
+import { apiClient } from './apiClient';
+
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || '';
+const USE_BACKEND = !!API_BASE;
 
 const USERS_KEY = 'lm_users';
 const SESSION_KEY = 'lm_session';
@@ -104,7 +108,14 @@ const saveSession = (session: Session | null): void => {
  * 회원가입
  */
 export async function register(payload: RegisterPayload): Promise<AuthUser> {
-  // Simulate network delay
+  if (USE_BACKEND) {
+    // Backend registration: call register then login to obtain token
+    await apiClient.post('/api/auth/register', { email: payload.email, password: payload.password, displayName: payload.displayName });
+    // After register, call login to obtain token and user
+    return await login({ email: payload.email, password: payload.password });
+  }
+
+  // Simulate network delay for mock
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const users = getUsers();
@@ -158,7 +169,20 @@ export async function register(payload: RegisterPayload): Promise<AuthUser> {
  * 로그인
  */
 export async function login(payload: LoginPayload): Promise<AuthUser> {
-  // Simulate network delay
+  if (USE_BACKEND) {
+    // Backend login: obtain token then fetch /me
+    const resp = await apiClient.post<{ token: string }>('/api/auth/login', { email: payload.email, password: payload.password });
+    const token = (resp as any).token;
+    if (!token) throw new Error('토큰을 받지 못했습니다');
+    try { localStorage.setItem('lm_token', token); } catch (e) {}
+    // fetch user info
+    const user = await apiClient.get<AuthUser>('/api/auth/me');
+    // 백엔드가 createdAt을 제공하지 않는 경우 대비
+    if (!(user as any).createdAt) (user as any).createdAt = Date.now();
+    return user;
+  }
+
+  // Simulate network delay for mock
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const users = getUsers();
@@ -194,17 +218,37 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
  * 로그아웃
  */
 export async function logout(): Promise<void> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
+  if (USE_BACKEND) {
+    try {
+      await apiClient.post('/api/auth/logout', {});
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // local cleanup
+  try { localStorage.removeItem('lm_token'); } catch (e) {}
   saveSession(null);
+
+  // emit logout event for store cleanup
+  try { window.dispatchEvent(new Event('lm:logout')); } catch (e) {}
 }
 
 /**
  * 현재 로그인된 사용자 가져오기
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  // Simulate network delay
+  if (USE_BACKEND) {
+    try {
+      const user = await apiClient.get<AuthUser>('/api/auth/me');
+      if (!(user as any).createdAt) (user as any).createdAt = Date.now();
+      return user;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Simulate network delay for mock
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   const session = getSession();

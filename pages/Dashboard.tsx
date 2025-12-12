@@ -109,7 +109,7 @@ export const Dashboard: React.FC = () => {
     setUnpublishingMap((prev) => ({ ...prev, [publicId]: true }));
     try {
       if (USE_BACKEND_DATA) {
-        await dataService.deletePublicLook(publicId, currentUser.email);
+        await dataService.deletePublicLook(publicId);
       }
       unpublishPublicLook(publicId);
       showToast('공개 코디가 삭제되었습니다.', 'success');

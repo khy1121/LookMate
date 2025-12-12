@@ -34,19 +34,15 @@ export const dataService = {
    * Backend: GET /api/data/closet?userId={userId}
    * Future: Replace useStore.closet with this API
    */
-  fetchClosetItems: async (userId: string): Promise<ClothingItem[]> => {
+  fetchClosetItems: async (): Promise<ClothingItem[]> => {
     if (!USE_BACKEND_DATA) {
       console.warn('[dataService] Backend not configured, use localStorage instead');
       return [];
     }
 
     try {
-      const response = await apiClient.get<{ items: ClothingItem[] }>(
-        '/api/data/closet',
-        { params: { userId } }
-      );
-      
-      console.log(`[dataService] Fetched ${response.items.length} closet items for user ${userId}`);
+      const response = await apiClient.get<{ items: ClothingItem[] }>('/api/data/closet');
+      console.log(`[dataService] Fetched ${response.items.length} closet items`);
       return response.items;
     } catch (error) {
       console.error('[dataService] fetchClosetItems error:', error);
@@ -63,19 +59,15 @@ export const dataService = {
    * Backend: GET /api/data/looks?userId={userId}
    * Future: Replace useStore.looks with this API
    */
-  fetchLooks: async (userId: string): Promise<Look[]> => {
+  fetchLooks: async (): Promise<Look[]> => {
     if (!USE_BACKEND_DATA) {
       console.warn('[dataService] Backend not configured, use localStorage instead');
       return [];
     }
 
     try {
-      const response = await apiClient.get<{ looks: Look[] }>(
-        '/api/data/looks',
-        { params: { userId } }
-      );
-      
-      console.log(`[dataService] Fetched ${response.looks.length} looks for user ${userId}`);
+      const response = await apiClient.get<{ looks: Look[] }>('/api/data/looks');
+      console.log(`[dataService] Fetched ${response.looks.length} looks`);
       return response.looks;
     } catch (error) {
       console.error('[dataService] fetchLooks error:', error);
@@ -117,17 +109,16 @@ export const dataService = {
     }
   },
 
-  fetchMyPublicLooks: async (email: string): Promise<PublicLook[]> => {
+  fetchMyPublicLooks: async (): Promise<PublicLook[]> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되어 있지 않습니다.');
     }
 
     try {
       const response = await apiClient.get<{ publicLooks: PublicLook[] }>(
-        '/api/data/my-public-looks',
-        { params: { email } }
+        '/api/data/my-public-looks'
       );
-      console.log(`[dataService] 내 공개 코디 ${response.publicLooks.length}개 로드 완료 (email=${email})`);
+      console.log(`[dataService] 내 공개 코디 ${response.publicLooks.length}개 로드 완료`);
       return response.publicLooks;
     } catch (error) {
       console.error('[dataService] fetchMyPublicLooks 실패:', error);
@@ -187,13 +178,11 @@ export const dataService = {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
       const response = await apiClient.post<{ item: ClothingItem }>(
         '/api/data/closet',
         { item: itemPayload }
       );
-
       console.log(`[dataService] 옷 추가 성공: ${response.item.id}`);
       return response.item;
     } catch (error) {
@@ -219,13 +208,11 @@ export const dataService = {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
       const response = await apiClient.put<{ item: ClothingItem }>(
         `/api/data/closet/${id}`,
         { patch }
       );
-
       console.log(`[dataService] 옷 수정 성공: ${id}`);
       return response.item;
     } catch (error) {
@@ -243,18 +230,12 @@ export const dataService = {
    * 
    * Backend: DELETE /api/data/closet/:id
    */
-  deleteClothingItem: async (
-    id: string
-  ): Promise<{ success: boolean }> => {
+  deleteClothingItem: async (id: string): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
-      const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/closet/${id}`
-      );
-
+      const response = await apiClient.del<{ success: boolean }>(`/api/data/closet/${id}`);
       console.log(`[dataService] 옷 삭제 성공: ${id}`);
       return response;
     } catch (error) {
@@ -277,26 +258,19 @@ export const dataService = {
    * 
    * Backend: POST /api/data/looks
    */
-  createLookForUser: async (
-    lookPayload: {
-      name: string;
-      itemIds: string[];
-      layers: any[];
-      snapshotUrl?: string;
-      isPublic?: boolean;
-      tags?: string[];
-    }
-  ): Promise<Look> => {
+  createLookForUser: async (lookPayload: {
+    name: string;
+    itemIds: string[];
+    layers: any[];
+    snapshotUrl?: string;
+    isPublic?: boolean;
+    tags?: string[];
+  }): Promise<Look> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
-      const response = await apiClient.post<{ look: Look }>(
-        '/api/data/looks',
-        { look: lookPayload }
-      );
-
+      const response = await apiClient.post<{ look: Look }>('/api/data/looks', { look: lookPayload });
       console.log(`[dataService] 룩 저장 성공: ${response.look.id}`);
       return response.look;
     } catch (error) {
@@ -314,18 +288,12 @@ export const dataService = {
    * 
    * Backend: DELETE /api/data/looks/:id
    */
-  deleteLook: async (
-    id: string
-  ): Promise<{ success: boolean }> => {
+  deleteLook: async (id: string): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
-      const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/looks/${id}`
-      );
-
+      const response = await apiClient.del<{ success: boolean }>(`/api/data/looks/${id}`);
       console.log(`[dataService] 룩 삭제 성공: ${id}`);
       return response;
     } catch (error) {
@@ -342,19 +310,12 @@ export const dataService = {
    * 공개 피드에 룩을 올리는 함수
    * 요청에 사용자의 이메일을 함께 보내서 서버에서 User를 찾도록 함
    */
-  publishLookToPublicFeed: async (
-    lookId: string
-  ): Promise<PublicLook> => {
+  publishLookToPublicFeed: async (lookId: string): Promise<PublicLook> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
-
     try {
-      const response = await apiClient.post<{ publicLook: PublicLook }>(
-        '/api/data/public-looks',
-        { lookId }
-      );
-
+      const response = await apiClient.post<{ publicLook: PublicLook }>('/api/data/public-looks', { lookId });
       console.log(`[dataService] 공개 룩 생성 성공: ${response.publicLook.publicId}`);
       return response.publicLook;
     } catch (error) {
@@ -367,18 +328,12 @@ export const dataService = {
    * 공개 피드에서 룩을 삭제(공개 해제)하는 함수
    * 서버에 요청자 이메일을 함께 보내어 권한을 확인함
    */
-  deletePublicLook: async (
-    publicId: string
-  ): Promise<{ success: boolean }> => {
+  deletePublicLook: async (publicId: string): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되어 있지 않습니다.');
     }
-
     try {
-      const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/public-looks/${publicId}`
-      );
-
+      const response = await apiClient.del<{ success: boolean }>(`/api/data/public-looks/${publicId}`);
       console.log(`[dataService] 공개 룩 삭제 성공: ${publicId}`);
       return response;
     } catch (error) {
