@@ -12,6 +12,22 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 
 /**
+ * JWT 헤더 자동 주입
+ * - localStorage의 `lm_token`을 읽어 `Authorization: Bearer <token>`를 추가합니다.
+ * - 호출자가 `init.headers`로 이미 `Authorization`을 제공하면 덮어쓰지 않습니다.
+ */
+function getAuthHeader(init?: RequestInit): Record<string, string> {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('lm_token') : null;
+    if (!token) return {};
+    const provided = init?.headers && (init.headers as any)['Authorization'];
+    return provided ? {} : { Authorization: `Bearer ${token}` };
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
  * URL에 쿼리 파라미터를 추가하는 헬퍼 함수
  */
 function buildUrlWithParams(
@@ -41,9 +57,15 @@ export async function get<T>(
 ): Promise<T> {
   const url = buildUrlWithParams(`${API_BASE_URL}${path}`, options?.params);
   
+  const headers = {
+    ...getAuthHeader(options?.init),
+    ...(options?.init?.headers ?? {}),
+  };
+
   const res = await fetch(url, {
     ...options?.init,
     method: 'GET',
+    headers,
   });
   
   if (!res.ok) {
@@ -57,13 +79,16 @@ export async function get<T>(
  * Generic POST request
  */
 export async function post<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...getAuthHeader(init),
+    ...(init?.headers ?? {}),
+  };
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
     body: JSON.stringify(body),
   });
   
@@ -78,9 +103,15 @@ export async function post<T>(path: string, body: unknown, init?: RequestInit): 
  * Upload file (multipart/form-data)
  */
 export async function upload<T>(path: string, formData: FormData, init?: RequestInit): Promise<T> {
+  const headers = {
+    ...getAuthHeader(init),
+    ...(init?.headers ?? {}),
+  };
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     method: 'POST',
+    headers,
     body: formData,
   });
   
@@ -95,13 +126,16 @@ export async function upload<T>(path: string, formData: FormData, init?: Request
  * Generic PUT request
  */
 export async function put<T>(path: string, body: unknown, init?: RequestInit): Promise<T> {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...getAuthHeader(init),
+    ...(init?.headers ?? {}),
+  };
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
     body: JSON.stringify(body),
   });
   
@@ -116,13 +150,17 @@ export async function put<T>(path: string, body: unknown, init?: RequestInit): P
  * Generic DELETE request
  */
 export async function del<T>(path: string, body?: unknown, init?: RequestInit): Promise<T> {
+  const baseHeaders = body ? { 'Content-Type': 'application/json' } : {};
+  const headers = {
+    ...baseHeaders,
+    ...getAuthHeader(init),
+    ...(init?.headers ?? {}),
+  };
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     method: 'DELETE',
-    headers: body ? {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    } : (init?.headers ?? {}),
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   

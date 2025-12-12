@@ -567,27 +567,18 @@ router.post('/closet', requireAuth, async (req: Request, res: Response) => {
  * Response:
  *   - item: ClothingItem (수정된)
  */
-router.put('/closet/:id', async (req: Request, res: Response) => {
+router.put('/closet/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { email, patch } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
+    const { patch } = req.body;
 
     if (!patch || typeof patch !== 'object') {
       return res.status(400).json({ error: '수정할 데이터가 필요합니다' });
     }
 
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [PUT] /api/data/closet/${id} email=${email}`);
-
-    // 사용자 찾기
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
+    const userId = (req.user as any).id;
+    console.log(`[${timestamp}] [PUT] /api/data/closet/${id} user=${userId}`);
 
     // 아이템 소유자 확인
     const existingItem = await prisma.clothingItem.findUnique({ where: { id } });
@@ -595,7 +586,7 @@ router.put('/closet/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '옷을 찾을 수 없습니다' });
     }
 
-    if (existingItem.userId !== user.id) {
+    if (existingItem.userId !== userId) {
       return res.status(403).json({ error: '수정 권한이 없습니다' });
     }
 
@@ -661,23 +652,13 @@ router.put('/closet/:id', async (req: Request, res: Response) => {
  * Response:
  *   - success: true
  */
-router.delete('/closet/:id', async (req: Request, res: Response) => {
+router.delete('/closet/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { email } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
+    const userId = (req.user as any).id;
 
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [DELETE] /api/data/closet/${id} email=${email}`);
-
-    // 사용자 찾기
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
+    console.log(`[${timestamp}] [DELETE] /api/data/closet/${id} user=${userId}`);
 
     // 아이템 소유자 확인
     const existingItem = await prisma.clothingItem.findUnique({ where: { id } });
@@ -685,7 +666,7 @@ router.delete('/closet/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '옷을 찾을 수 없습니다' });
     }
 
-    if (existingItem.userId !== user.id) {
+    if (existingItem.userId !== userId) {
       return res.status(403).json({ error: '삭제 권한이 없습니다' });
     }
 
@@ -723,28 +704,22 @@ router.delete('/closet/:id', async (req: Request, res: Response) => {
  * Response:
  *   - look: Look (frontend 타입, items 포함)
  */
-router.post('/looks', async (req: Request, res: Response) => {
+router.post('/looks', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { email, displayName, look } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
+    const { look } = req.body;
 
     if (!look || typeof look !== 'object') {
       return res.status(400).json({ error: '룩 정보가 필요합니다' });
     }
 
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [POST] /api/data/looks email=${email}`);
-
-    // 사용자 찾기 또는 생성
-    const user = await getOrCreateUserByEmail(email, displayName);
+    const userId = (req.user as any).id;
+    console.log(`[${timestamp}] [POST] /api/data/looks user=${userId}`);
 
     // Look 생성
     const newLook = await prisma.look.create({
       data: {
-        userId: user.id,
+        userId,
         name: look.name,
         itemIds: JSON.stringify(look.itemIds || []),
         layers: JSON.stringify(look.layers || []),
@@ -815,23 +790,13 @@ router.post('/looks', async (req: Request, res: Response) => {
  * Response:
  *   - success: true
  */
-router.delete('/looks/:id', async (req: Request, res: Response) => {
+router.delete('/looks/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { email } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
+    const userId = (req.user as any).id;
 
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [DELETE] /api/data/looks/${id} email=${email}`);
-
-    // 사용자 찾기
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
+    console.log(`[${timestamp}] [DELETE] /api/data/looks/${id} user=${userId}`);
 
     // 룩 소유자 확인
     const existingLook = await prisma.look.findUnique({ where: { id } });
@@ -839,7 +804,7 @@ router.delete('/looks/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: '룩을 찾을 수 없습니다' });
     }
 
-    if (existingLook.userId !== user.id) {
+    if (existingLook.userId !== userId) {
       return res.status(403).json({ error: '삭제 권한이 없습니다' });
     }
 
@@ -860,18 +825,18 @@ router.delete('/looks/:id', async (req: Request, res: Response) => {
  * 단순 좋아요 카운터 토글 (사용자별 중복 방지 미구현)
  * TODO: 사용자별 Like 테이블로 분리 예정
  */
-router.post('/public-looks/:publicId/like', async (req: Request, res: Response) => {
+router.post('/public-looks/:publicId/like', requireAuth, async (req: Request, res: Response) => {
   try {
     const { publicId } = req.params;
     const { action = 'like' } = req.body || {};
 
     if (!publicId) {
-      return res.status(400).json({ error: 'publicId is required' });
+      return res.status(400).json({ error: 'publicId가 필요합니다' });
     }
 
     const publicLook = await prisma.publicLook.findUnique({ where: { publicId } });
     if (!publicLook) {
-      return res.status(404).json({ error: 'PublicLook not found' });
+      return res.status(404).json({ error: '공개 룩을 찾을 수 없습니다' });
     }
 
     const delta = action === 'unlike' ? -1 : 1;
@@ -894,18 +859,18 @@ router.post('/public-looks/:publicId/like', async (req: Request, res: Response) 
  * 단순 북마크 카운터 토글 (사용자별 중복 방지 미구현)
  * TODO: 사용자별 Bookmark 테이블로 분리 예정
  */
-router.post('/public-looks/:publicId/bookmark', async (req: Request, res: Response) => {
+router.post('/public-looks/:publicId/bookmark', requireAuth, async (req: Request, res: Response) => {
   try {
     const { publicId } = req.params;
     const { action = 'bookmark' } = req.body || {};
 
     if (!publicId) {
-      return res.status(400).json({ error: 'publicId is required' });
+      return res.status(400).json({ error: 'publicId가 필요합니다' });
     }
 
     const publicLook = await prisma.publicLook.findUnique({ where: { publicId } });
     if (!publicLook) {
-      return res.status(404).json({ error: 'PublicLook not found' });
+      return res.status(404).json({ error: '공개 룩을 찾을 수 없습니다' });
     }
 
     const delta = action === 'unbookmark' ? -1 : 1;

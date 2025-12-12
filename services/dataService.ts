@@ -135,14 +135,12 @@ export const dataService = {
     }
   },
 
-  fetchUserProfile: async (email: string): Promise<UserProfile> => {
+  fetchUserProfile: async (): Promise<UserProfile> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되지 않았습니다');
     }
     try {
-      const response = await apiClient.get<UserProfile>('/api/data/profile', {
-        params: { email },
-      });
+      const response = await apiClient.get<UserProfile>('/api/data/profile');
       return response;
     } catch (error) {
       console.error('[dataService] 프로필 조회 오류:', error);
@@ -151,7 +149,6 @@ export const dataService = {
   },
 
   updateUserProfile: async (input: {
-    email: string;
     displayName?: string;
     avatarUrl?: string | null;
     height?: number | null;
@@ -185,8 +182,6 @@ export const dataService = {
    * Backend: POST /api/data/closet
    */
   createClothingItemForUser: async (
-    email: string,
-    displayName: string | undefined,
     itemPayload: Omit<ClothingItem, 'id' | 'userId' | 'createdAt'>
   ): Promise<ClothingItem> => {
     if (!USE_BACKEND_DATA) {
@@ -196,11 +191,7 @@ export const dataService = {
     try {
       const response = await apiClient.post<{ item: ClothingItem }>(
         '/api/data/closet',
-        {
-          email,
-          displayName,
-          item: itemPayload,
-        }
+        { item: itemPayload }
       );
 
       console.log(`[dataService] 옷 추가 성공: ${response.item.id}`);
@@ -222,7 +213,6 @@ export const dataService = {
    * Backend: PUT /api/data/closet/:id
    */
   updateClothingItem: async (
-    email: string,
     id: string,
     patch: Partial<Omit<ClothingItem, 'id' | 'userId' | 'createdAt'>>
   ): Promise<ClothingItem> => {
@@ -233,10 +223,7 @@ export const dataService = {
     try {
       const response = await apiClient.put<{ item: ClothingItem }>(
         `/api/data/closet/${id}`,
-        {
-          email,
-          patch,
-        }
+        { patch }
       );
 
       console.log(`[dataService] 옷 수정 성공: ${id}`);
@@ -257,7 +244,6 @@ export const dataService = {
    * Backend: DELETE /api/data/closet/:id
    */
   deleteClothingItem: async (
-    email: string,
     id: string
   ): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
@@ -266,8 +252,7 @@ export const dataService = {
 
     try {
       const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/closet/${id}`,
-        { email }
+        `/api/data/closet/${id}`
       );
 
       console.log(`[dataService] 옷 삭제 성공: ${id}`);
@@ -293,8 +278,6 @@ export const dataService = {
    * Backend: POST /api/data/looks
    */
   createLookForUser: async (
-    email: string,
-    displayName: string | undefined,
     lookPayload: {
       name: string;
       itemIds: string[];
@@ -311,11 +294,7 @@ export const dataService = {
     try {
       const response = await apiClient.post<{ look: Look }>(
         '/api/data/looks',
-        {
-          email,
-          displayName,
-          look: lookPayload,
-        }
+        { look: lookPayload }
       );
 
       console.log(`[dataService] 룩 저장 성공: ${response.look.id}`);
@@ -336,7 +315,6 @@ export const dataService = {
    * Backend: DELETE /api/data/looks/:id
    */
   deleteLook: async (
-    email: string,
     id: string
   ): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
@@ -345,8 +323,7 @@ export const dataService = {
 
     try {
       const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/looks/${id}`,
-        { email }
+        `/api/data/looks/${id}`
       );
 
       console.log(`[dataService] 룩 삭제 성공: ${id}`);
@@ -366,8 +343,6 @@ export const dataService = {
    * 요청에 사용자의 이메일을 함께 보내서 서버에서 User를 찾도록 함
    */
   publishLookToPublicFeed: async (
-    email: string,
-    displayName: string | undefined,
     lookId: string
   ): Promise<PublicLook> => {
     if (!USE_BACKEND_DATA) {
@@ -377,7 +352,7 @@ export const dataService = {
     try {
       const response = await apiClient.post<{ publicLook: PublicLook }>(
         '/api/data/public-looks',
-        { email, displayName, lookId }
+        { lookId }
       );
 
       console.log(`[dataService] 공개 룩 생성 성공: ${response.publicLook.publicId}`);
@@ -393,8 +368,7 @@ export const dataService = {
    * 서버에 요청자 이메일을 함께 보내어 권한을 확인함
    */
   deletePublicLook: async (
-    publicId: string,
-    email?: string
+    publicId: string
   ): Promise<{ success: boolean }> => {
     if (!USE_BACKEND_DATA) {
       throw new Error('백엔드가 설정되어 있지 않습니다.');
@@ -402,8 +376,7 @@ export const dataService = {
 
     try {
       const response = await apiClient.del<{ success: boolean }>(
-        `/api/data/public-looks/${publicId}`,
-        email ? { email } : undefined
+        `/api/data/public-looks/${publicId}`
       );
 
       console.log(`[dataService] 공개 룩 삭제 성공: ${publicId}`);
