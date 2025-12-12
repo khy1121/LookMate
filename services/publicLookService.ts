@@ -20,6 +20,15 @@ import { PublicLook, ClothingItem, Category } from '../types';
  */
 
 // Mock 데이터 생성 (더 이상 사용하지 않음 - useStore.publicLooks 사용)
+// Simple SVG placeholder generator to avoid external requests
+const svgPlaceholder = (w: number, h: number, text: string, bg = '4F46E5', fg = 'FFFFFF') => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>` +
+    `<rect width='100%' height='100%' fill='#${bg}'/>` +
+    `<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='${Math.floor(Math.min(w, h) / 10)}' fill='#${fg}'>${text}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const generateMockPublicLooks = (): PublicLook[] => {
   const tags = [
     ['캐주얼', '데일리'],
@@ -41,8 +50,8 @@ const generateMockPublicLooks = (): PublicLook[] => {
     const items: ClothingItem[] = categories.map((cat, idx) => ({
       id: `mock-item-${i}-${idx}`,
       userId: 'public-user',
-      imageUrl: `https://via.placeholder.com/200x300/4F46E5/FFFFFF?text=${cat}`,
-      originalImageUrl: `https://via.placeholder.com/200x300/4F46E5/FFFFFF?text=${cat}`,
+      imageUrl: svgPlaceholder(200, 300, `${cat}`),
+      originalImageUrl: svgPlaceholder(200, 300, `${cat}`),
       category: cat,
       color: ['Black', 'White', 'Navy', 'Beige', 'Gray'][Math.floor(Math.random() * 5)],
       brand: ['Uniqlo', 'Zara', 'COS'][Math.floor(Math.random() * 3)],
@@ -57,7 +66,7 @@ const generateMockPublicLooks = (): PublicLook[] => {
       name: `코디 ${i + 1}`,
       ownerName: ownerNames[i % ownerNames.length],
       ownerId: `mock-user-${i % ownerNames.length}`,
-      snapshotUrl: `https://via.placeholder.com/400x600/4F46E5/FFFFFF?text=Look+${i + 1}`,
+      snapshotUrl: svgPlaceholder(400, 600, `Look ${i + 1}`),
       items,
       likesCount: Math.floor(Math.random() * 500) + 50,
       bookmarksCount: Math.floor(Math.random() * 200) + 20,

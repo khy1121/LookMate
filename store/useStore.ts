@@ -96,7 +96,7 @@ export const useStore = create<AppState>((set, get) => ({
   // 백엔드에서 프로필 정보를 불러와 상태를 갱신합니다.
   syncUserProfileFromBackend: async (email: string) => {
     try {
-      const profile = await dataService.fetchUserProfile(email);
+      const profile = await dataService.fetchUserProfile();
       set((state) => {
         if (!state.currentUser) return {};
         const mergedCurrentUser = {
@@ -140,7 +140,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (USE_BACKEND_DATA) {
         set({ isClothesLoading: true });
         dataService
-          .fetchClosetItems(user.id)
+          .fetchClosetItems()
           .then((items) => {
             set({ clothes: items });
             setLocalStorage(clothesKey, items);
@@ -196,7 +196,26 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   logout: () => {
-    set({ user: null, isAuthenticated: false, currentUser: null });
+    // 전체 사용자 상태 초기화 및 토큰 제거
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('lm_token');
+    } catch (e) {}
+
+    set({
+      user: null,
+      isAuthenticated: false,
+      currentUser: null,
+      clothes: [],
+      looks: [],
+      activeLook: null,
+      recommendedItems: null,
+      publicLooks: [],
+      likedPublicLookIds: [],
+      bookmarkedPublicLookIds: [],
+      myPublicLooks: [],
+      isMyPublicLooksLoading: false,
+      isClothesLoading: false,
+    });
   },
   
   updateUser: (patch) =>
@@ -214,7 +233,6 @@ export const useStore = create<AppState>((set, get) => ({
           const current = get().currentUser;
           dataService
             .updateUserProfile({
-              email,
               displayName: patch.displayName ?? current?.displayName,
               avatarUrl: patch.avatarUrl ?? (current as any)?.avatarUrl ?? null,
               height: patch.height ?? (current as any)?.height ?? null,
@@ -257,17 +275,13 @@ export const useStore = create<AppState>((set, get) => ({
 
       // 백엔드 모드: 서버 저장 후 반영
       dataService
-        .createClothingItemForUser(
-          state.currentUser.email,
-          state.currentUser.displayName,
-          {
-            ...itemData,
-            isFavorite: false,
-            shoppingUrl: itemData.shoppingUrl ?? null,
-            price: itemData.price ?? null,
-            isPurchased: itemData.isPurchased ?? false,
-          }
-        )
+        .createClothingItemForUser({
+          ...itemData,
+          isFavorite: false,
+          shoppingUrl: itemData.shoppingUrl ?? null,
+          price: itemData.price ?? null,
+          isPurchased: itemData.isPurchased ?? false,
+        })
         .then((created) => {
           set((innerState) => {
             const newClothes = [created, ...innerState.clothes];
@@ -296,7 +310,7 @@ export const useStore = create<AppState>((set, get) => ({
       }
 
       dataService
-        .deleteClothingItem(state.currentUser.email, id)
+        .deleteClothingItem(id)
         .then(() => {
           set((innerState) => {
             const newClothes = innerState.clothes.filter((c) => c.id !== id);
@@ -329,7 +343,7 @@ export const useStore = create<AppState>((set, get) => ({
       }
 
       dataService
-        .updateClothingItem(state.currentUser.email, id, { isFavorite: nextFavorite })
+        .updateClothingItem(id, { isFavorite: nextFavorite })
         .then((updated) => {
           set((innerState) => {
             const newClothes = innerState.clothes.map((c) =>
@@ -366,7 +380,7 @@ export const useStore = create<AppState>((set, get) => ({
       delete (safePatch as any).createdAt;
 
       dataService
-        .updateClothingItem(state.currentUser.email, id, safePatch)
+        .updateClothingItem(id, safePatch)
         .then((updated) => {
           set((innerState) => {
             const newClothes = innerState.clothes.map((c) =>
@@ -438,7 +452,7 @@ export const useStore = create<AppState>((set, get) => ({
       delete (payload as any).createdAt;
 
       dataService
-        .createClothingItemForUser(email, displayName, payload as Omit<ClothingItem, 'id' | 'userId' | 'createdAt'>)
+        .createClothingItemForUser(payload as Omit<ClothingItem, 'id' | 'userId' | 'createdAt'>)
         .then((created) => {
           set((innerState) => {
             const newClothes = [created, ...innerState.clothes];
@@ -719,8 +733,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     set({ isMyPublicLooksLoading: true });
-    try {
-      const publicLooks = await dataService.fetchMyPublicLooks(state.currentUser.email);
+      try {
+      const publicLooks = await dataService.fetchMyPublicLooks();
       set({ myPublicLooks: publicLooks });
     } catch (err) {
       console.error('[Store] 내 공개 코디 로드 실패:', err);
@@ -778,11 +792,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     try {
-      const publicLook = await dataService.publishLookToPublicFeed(
-        state.currentUser.email,
-        state.currentUser.displayName,
-        lookId
-      );
+      const publicLook = await dataService.publishLookToPublicFeed(lookId);
 
       // TODO: Explore 피드를 최신화하도록 간단한 refetch 플래그를 연결하면 좋음
       set((s) => {
@@ -917,3 +927,29 @@ export const useStore = create<AppState>((set, get) => ({
     return state.publicLooks.find((pl) => pl.publicId === publicId) || null;
   },
 }));
+
+// Listen for centralized unauthorized events and perform logout
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('lm:unauthorized', () => {
+    try {
+      // Ensure store exists and call logout
+      const mod = require('./useStore');
+      if (mod && mod.useStore) {
+        mod.useStore.getState().logout();
+      }
+    } catch (e) {
+      // as fallback, directly call our logout via exported hook
+      try { (useStore as any).getState().logout(); } catch (err) {}
+    }
+  });
+  window.addEventListener('lm:logout', () => {
+    try {
+      const mod = require('./useStore');
+      if (mod && mod.useStore) {
+        mod.useStore.getState().logout();
+      }
+    } catch (e) {
+      try { (useStore as any).getState().logout(); } catch (err) {}
+    }
+  });
+}

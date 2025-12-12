@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../prisma/client';
+import { prisma } from '../db';
 import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
@@ -44,10 +44,10 @@ router.post('/login', async (req: Request, res: Response) => {
     }
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error('JWT 시크릿이 설정되지 않았습니다.');
-    const token = jwt.sign(
+    const token = (jwt as any).sign(
       { id: user.id, email: user.email, displayName: user.displayName },
-      secret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+      secret as any,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' } as any
     );
     return res.json({ token });
   } catch (err) {
@@ -64,10 +64,11 @@ router.post('/logout', (req: Request, res: Response) => {
 // 내 정보 조회
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   // req.user는 requireAuth에서 주입
+  const user = req.user as any;
   return res.json({
-    id: req.user.id,
-    email: req.user.email,
-    displayName: req.user.displayName,
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
   });
 });
 

@@ -77,6 +77,15 @@ export const aiService = {
   }): Promise<string> => {
     console.log('[AI] Generating avatar with options:', options);
 
+    // Simple SVG placeholder generator to avoid external requests
+    const svgPlaceholder = (w: number, h: number, text: string, bg = '4F46E5', fg = 'FFFFFF') => {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>` +
+        `<rect width='100%' height='100%' fill='#${bg}'/>` +
+        `<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='${Math.floor(Math.min(w, h) / 10)}' fill='#${fg}'>${text}</text>` +
+        `</svg>`;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    };
+
     if (USE_BACKEND_AI && options.faceImage) {
       try {
         const formData = new FormData();
@@ -99,7 +108,7 @@ export const aiService = {
             return URL.createObjectURL(options.fullBodyImage);
           }
           const genderPath = options.gender === 'female' ? 'woman' : 'man';
-          return `https://via.placeholder.com/400x800?text=${genderPath}+${options.bodyType || 'normal'}+Avatar`;
+          return svgPlaceholder(400, 800, `${genderPath} ${options.bodyType || 'normal'} Avatar`);
         });
       }
     }
@@ -112,7 +121,7 @@ export const aiService = {
     }
 
     const genderPath = options.gender === 'female' ? 'woman' : 'man';
-    return `https://via.placeholder.com/400x800?text=${genderPath}+${options.bodyType || 'normal'}+Avatar`;
+    return svgPlaceholder(400, 800, `${genderPath} ${options.bodyType || 'normal'} Avatar`);
   },
 
   /**

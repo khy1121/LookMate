@@ -34,6 +34,15 @@ export interface ProductSearchOptions {
 }
 
 // Mock 데이터 생성 헬퍼
+// Simple SVG placeholder generator to avoid external requests
+const svgPlaceholder = (w: number, h: number, text: string, bg = '4F46E5', fg = 'FFFFFF') => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>` +
+    `<rect width='100%' height='100%' fill='#${bg}'/>` +
+    `<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial, Helvetica, sans-serif' font-size='${Math.floor(Math.min(w, h) / 10)}' fill='#${fg}'>${text}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const generateMockProducts = (count: number, baseCategory?: Category | null): Product[] => {
   const brands = ['Uniqlo', 'Zara', 'H&M', 'Musinsa', 'Nike', 'Adidas', 'COS', 'Everlane'];
   const categories: Category[] = ['top', 'bottom', 'outer', 'onepiece', 'shoes', 'accessory'];
@@ -47,7 +56,7 @@ const generateMockProducts = (count: number, baseCategory?: Category | null): Pr
       id: `product-${Date.now()}-${i}`,
       name: `${brand} ${category} ${i + 1}`,
       brand,
-      thumbnailUrl: `https://via.placeholder.com/300x400/4F46E5/FFFFFF?text=${category}+${i + 1}`,
+      thumbnailUrl: svgPlaceholder(300, 400, `${category} ${i + 1}`),
       productUrl: `https://example.com/product/${i + 1}`,
       price,
       currency: 'KRW' as const,
