@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { requireAuth } from '../middleware/requireAuth';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 
@@ -39,24 +40,13 @@ async function getOrCreateUserByEmail(email: string, displayName?: string) {
 
 /**
  * GET /api/data/profile
- * 이메일로 사용자 프로필을 조회합니다. 없으면 생성 후 반환합니다.
+ * JWT 인증된 사용자 프로필을 반환합니다.
  */
-router.get('/profile', async (req: Request, res: Response) => {
+router.get('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { email, displayName } = req.query;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
-
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [GET] /api/data/profile email=${email}`);
-
-    const user = await getOrCreateUserByEmail(
-      email,
-      typeof displayName === 'string' ? displayName : undefined
-    );
-
+    const { id } = req.user;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
     const profile = {
       email: user.email,
       displayName: user.displayName || user.name,
@@ -65,7 +55,6 @@ router.get('/profile', async (req: Request, res: Response) => {
       bodyType: user.bodyType,
       gender: user.gender,
     };
-
     res.json(profile);
   } catch (error: any) {
     console.error('❌ 프로필 조회 실패:', error);
@@ -75,33 +64,15 @@ router.get('/profile', async (req: Request, res: Response) => {
 
 /**
  * PUT /api/data/profile
- * 사용자 프로필을 생성 또는 업데이트합니다.
+ * JWT 인증된 사용자 프로필을 업데이트합니다.
  */
-router.put('/profile', async (req: Request, res: Response) => {
+router.put('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { email, displayName, avatarUrl, height, bodyType, gender } = req.body || {};
-
-    if (!email || typeof email !== 'string' || email.trim() === '') {
-      return res.status(400).json({ error: '이메일이 비어 있습니다.' });
-    }
-
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [PUT] /api/data/profile email=${email}`);
-
-    const nameFallback = displayName || email.split('@')[0];
-
-    const user = await prisma.user.upsert({
-      where: { email },
-      create: {
-        email,
-        name: nameFallback,
-        displayName: nameFallback,
-        avatarUrl: avatarUrl ?? null,
-        height: height ?? null,
-        bodyType: bodyType ?? null,
-        gender: gender ?? null,
-      },
-      update: {
+    const { displayName, avatarUrl, height, bodyType, gender } = req.body || {};
+    const { id } = req.user;
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
         ...(displayName !== undefined ? { displayName } : {}),
         ...(avatarUrl !== undefined ? { avatarUrl } : {}),
         ...(height !== undefined ? { height } : {}),
@@ -109,7 +80,6 @@ router.put('/profile', async (req: Request, res: Response) => {
         ...(gender !== undefined ? { gender } : {}),
       },
     });
-
     const profile = {
       email: user.email,
       displayName: user.displayName || user.name,
@@ -118,8 +88,6 @@ router.put('/profile', async (req: Request, res: Response) => {
       bodyType: user.bodyType,
       gender: user.gender,
     };
-
-    console.log('  → 프로필 업데이트 완료');
     res.json(profile);
   } catch (error: any) {
     console.error('❌ 프로필 업데이트 실패:', error);
@@ -384,23 +352,15 @@ router.get('/my-public-looks', async (req: Request, res: Response) => {
  * Response:
  *  - publicLook: PublicLook (frontend 호환 형식)
  */
-router.post('/public-looks', async (req: Request, res: Response) => {
+// 공개 룩 등록: 인증 필요, 소유자만 가능
+router.post('/public-looks', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { email, displayName, lookId } = req.body;
 
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
+    const { lookId } = req.body;
     if (!lookId || typeof lookId !== 'string') {
       return res.status(400).json({ error: 'lookId가 필요합니다' });
     }
-
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [POST] /api/data/public-looks email=${email} lookId=${lookId}`);
-
-    // 사용자 찾기
-    const user = await getOrCreateUserByEmail(email, displayName);
-
+    const user = req.user;
     // 룩 존재 및 소유자 확인
     const look = await prisma.look.findUnique({ where: { id: lookId } });
     if (!look) return res.status(404).json({ error: '룩을 찾을 수 없습니다' });
@@ -440,11 +400,12 @@ router.post('/public-looks', async (req: Request, res: Response) => {
     // publicId 생성 (간단한 URL-friendly ID)
     const publicId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 
+
     // PublicLook 생성
-    const createData: any = {
+    const createData = {
       lookId: look.id,
       publicId,
-      ownerName: user.displayName || user.name,
+      ownerName: user.displayName,
       ownerEmail: user.email,
       ownerId: user.id,
       snapshotUrl: look.snapshotUrl || null,
@@ -490,25 +451,16 @@ router.post('/public-looks', async (req: Request, res: Response) => {
  * Request body:
  *  - email (string, optional): 소유자 확인용 이메일 (제공 시 검증)
  */
-router.delete('/public-looks/:publicId', async (req: Request, res: Response) => {
+// 공개 룩 삭제: 인증 필요, 소유자만 가능
+router.delete('/public-looks/:publicId', requireAuth, async (req: Request, res: Response) => {
   try {
+
     const { publicId } = req.params;
-    const { email } = req.body || {};
-
     if (!publicId || typeof publicId !== 'string') return res.status(400).json({ error: 'publicId가 필요합니다' });
-
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [DELETE] /api/data/public-looks/${publicId} email=${email ?? 'none'}`);
-
+    const user = req.user;
     const pl = await prisma.publicLook.findUnique({ where: { publicId } });
     if (!pl) return res.status(404).json({ error: '공개 룩을 찾을 수 없습니다' });
-
-    if (email) {
-      if (typeof email !== 'string') return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다' });
-      const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-      if ((pl as any).ownerEmail !== user.email) return res.status(403).json({ error: '삭제 권한이 없습니다' });
-    }
+    if (pl.ownerEmail !== user.email) return res.status(403).json({ error: '삭제 권한이 없습니다' });
 
     // 연결된 룩이 있으면 isPublic false로 업데이트
     try {
@@ -544,28 +496,18 @@ router.delete('/public-looks/:publicId', async (req: Request, res: Response) => 
  * Response:
  *   - item: ClothingItem (frontend 타입)
  */
-router.post('/closet', async (req: Request, res: Response) => {
+// 옷장 추가: 인증 필요, 소유자 본인만 가능
+router.post('/closet', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { email, displayName, item } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: '이메일이 필요합니다' });
-    }
-
+    const { item } = req.body;
     if (!item || typeof item !== 'object') {
       return res.status(400).json({ error: '옷 정보가 필요합니다' });
     }
-
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [POST] /api/data/closet email=${email}`);
-
-    // 사용자 찾기 또는 생성
-    const user = await getOrCreateUserByEmail(email, displayName);
-
-    // ClothingItem 생성
+    const userId = req.user.id;
+    // ClothingItem 생성 (항상 본인 userId)
     const newItem = await prisma.clothingItem.create({
       data: {
-        userId: user.id,
+        userId,
         category: item.category,
         imageUrl: item.imageUrl,
         originalImageUrl: item.originalImageUrl,

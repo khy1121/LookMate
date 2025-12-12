@@ -29,8 +29,8 @@ model User {
   clothingItems ClothingItem[]
   looks         Look[]
   
-  // Future: passwordHash for real authentication
-  // passwordHash String?
+  // 실제 인증을 위한 비밀번호 해시 필드 추가 (Step 33)
+  passwordHash String?
   
   @@map("users")
 }

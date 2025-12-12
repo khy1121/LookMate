@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import aiRoutes from './routes/ai';
 import dataRoutes from './routes/data';
+import authRoutes from './routes/auth';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.use('/api/ai', aiRoutes);
+app.use('/api/auth', authRoutes); // 인증 라우트 추가 (Step 33)
 app.use('/api/data', dataRoutes);
 
 // 404 핸들러
